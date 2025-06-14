@@ -40,11 +40,11 @@
 
 ---
 
+<div align="center">
+
 ## ✨ **What is WallFetch?**
 
 **WallFetch** is a powerful, modern CLI tool designed for Linux enthusiasts who want to **effortlessly discover, download, and manage stunning wallpapers** from multiple sources. Built with performance and simplicity in mind, it transforms your wallpaper collection workflow into a seamless experience.
-
-<div align="center">
 
 ### 🎯 **Perfect for...**
 **Desktop Customizers** • **Linux Power Users** • **Aesthetic Enthusiasts** • **Developers**
@@ -52,6 +52,8 @@
 </div>
 
 ---
+
+<div align="center">
 
 ## 🚀 **Core Features**
 
@@ -102,6 +104,8 @@
 </tr>
 </table>
 
+</div>
+
 ---
 
 <div align="center">
@@ -119,9 +123,11 @@
 
 </div>
 
-## 📦 Installation
+---
 
-### Quick Install (Recommended)
+## 📦 **Installation**
+
+### 🚀 **Quick Install (Recommended)**
 
 **One-liner installation for Linux/macOS:**
 ```bash
