@@ -19,18 +19,23 @@ jobs:
           - goos: linux
             goarch: amd64
             suffix: ""
+            cgo_enabled: 1
           - goos: linux
             goarch: arm64
             suffix: ""
+            cgo_enabled: 1
           - goos: darwin
             goarch: amd64
             suffix: ""
+            cgo_enabled: 0
           - goos: darwin
             goarch: arm64
             suffix: ""
+            cgo_enabled: 0
           - goos: windows
             goarch: amd64
             suffix: ".exe"
+            cgo_enabled: 0
 
     steps:
     - name: Checkout code
@@ -44,11 +49,22 @@ jobs:
     - name: Get dependencies
       run: go mod download
 
+    - name: Install build dependencies
+      if: matrix.cgo_enabled == 1
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib libc6-dev
+        # Install cross-compilation toolchains
+        if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm64" ]; then
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+        fi
+
     - name: Build binary
       env:
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}
-        CGO_ENABLED: 0
+        CGO_ENABLED: ${{ matrix.cgo_enabled }}
+        CC: ${{ matrix.goos == 'linux' && matrix.goarch == 'arm64' && 'aarch64-linux-gnu-gcc' || 'gcc' }}
       run: |
         mkdir -p dist
         go build -ldflags="-s -w -X main.Version=${{ github.ref_name }}" \
