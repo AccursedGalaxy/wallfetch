@@ -57,40 +57,21 @@
 
 ## 🚀 **Core Features**
 
-<table>
-<tr>
-<td width="50%">
+</div>
 
-**🌐 Multi-Source Support**  
-Fetch from **Wallhaven** and other premium sources  
-• 🔍 Advanced search • 🏷️ Category filtering • ⭐ Quality-rated content
+<div align="center">
 
-**🧠 Smart Intelligence**  
-Intelligent duplicate detection & management  
-• 🔐 SHA256 verification • 📊 Metadata tracking • 🗃️ SQLite backend
+| 🌐 **Multi-Source** | 🎨 **Smart Filtering** | ⚡ **Performance** |
+|:---:|:---:|:---:|
+| Wallhaven + More | Resolution + Aspect | Concurrent Downloads |
+| 🔍 Advanced Search | 🏷️ Category Sorting | 🔧 Worker Pools |
+| ⭐ Quality Rating | 🖼️ Orientation Control | 💾 Efficient Storage |
 
-**⚡ Performance Optimized**  
-Lightning-fast concurrent downloads  
-• 🔧 Worker pools • 📈 Batch processing • 💾 Storage management
-
-</td>
-<td width="50%">
-
-**🎨 Advanced Filtering**  
-Precision control over your collection  
-• 📐 Resolution filters • 🎭 Category sorting • 🖼️ Orientation prefs
-
-**🖥️ Cross-Platform Ready**  
-Seamless experience across platforms  
-• 🐧 **Linux** (Primary) • 🍎 **macOS** • 🪟 **Windows**
-
-**🛠️ Developer Experience**  
-Modern CLI with professional features  
-• 🐚 Shell completions • 📋 Rich config • 🔄 Easy automation
-
-</td>
-</tr>
-</table>
+| 🧠 **Intelligence** | 🖥️ **Cross-Platform** | 🛠️ **Developer** |
+|:---:|:---:|:---:|
+| Duplicate Detection | Linux + macOS + Windows | Modern CLI |
+| 🔐 SHA256 Verification | 🐧 Primary Linux Focus | 🐚 Shell Completions |
+| 🗃️ SQLite Database | 📱 Universal Experience | 🔄 Easy Automation |
 
 </div>
 
