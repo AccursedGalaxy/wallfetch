@@ -9,26 +9,115 @@
  ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ╚══════╝   ╚═╝    ╚═════╝╚═╝  ╚═╝
 </pre>
 
+### 🎭 *Professional Wallpaper Management for Linux*
+
+> *Transform your desktop with curated wallpapers from across the web*
+
+---
+
+<p align="center">
+  <a href="https://golang.org/">
+    <img src="https://img.shields.io/github/go-mod/go-version/AccursedGalaxy/wallfetch?style=for-the-badge&logo=go&logoColor=white&color=00ADD8" alt="Go Version">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/github/license/AccursedGalaxy/wallfetch?style=for-the-badge&color=green" alt="License">
+  </a>
+  <a href="https://github.com/AccursedGalaxy/wallfetch/releases">
+    <img src="https://img.shields.io/github/v/release/AccursedGalaxy/wallfetch?style=for-the-badge&logo=github&color=blue" alt="Release">
+  </a>
+  <a href="https://github.com/AccursedGalaxy/wallfetch/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/AccursedGalaxy/wallfetch/release.yml?style=for-the-badge&logo=github-actions&logoColor=white" alt="Build Status">
+  </a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey?style=for-the-badge" alt="Platform">
+  <img src="https://img.shields.io/github/downloads/AccursedGalaxy/wallfetch/total?style=for-the-badge&color=success" alt="Downloads">
+  <img src="https://img.shields.io/github/stars/AccursedGalaxy/wallfetch?style=for-the-badge&color=yellow" alt="Stars">
+</p>
+
 </div>
+
+---
+
+## ✨ **What is WallFetch?**
+
+**WallFetch** is a powerful, modern CLI tool designed for Linux enthusiasts who want to **effortlessly discover, download, and manage stunning wallpapers** from multiple sources. Built with performance and simplicity in mind, it transforms your wallpaper collection workflow into a seamless experience.
+
 <div align="center">
-**Professional Wallpaper Management for Linux**
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/AccursedGalaxy/wallfetch)](https://golang.org/)
-[![License](https://img.shields.io/github/license/AccursedGalaxy/wallfetch)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/AccursedGalaxy/wallfetch)](https://github.com/AccursedGalaxy/wallfetch/releases)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/AccursedGalaxy/wallfetch/release.yml)](https://github.com/AccursedGalaxy/wallfetch/actions)
+### 🎯 **Perfect for...**
+**Desktop Customizers** • **Linux Power Users** • **Aesthetic Enthusiasts** • **Developers**
 
 </div>
 
-## 🚀 Features
+---
 
-- **Multiple Sources**: Fetch wallpapers from Wallhaven and other sources
-- **Smart Filtering**: Filter by resolution, aspect ratio, categories, and more
-- **Duplicate Detection**: Intelligent duplicate detection using SHA256 checksums
-- **Database Management**: Local SQLite database for metadata and file tracking
-- **Concurrent Downloads**: Configurable worker pools for fast downloads
-- **Cross-Platform**: Support for Linux, macOS, and Windows
-- **Professional CLI**: Modern command-line interface with shell completions
+## 🚀 **Core Features**
+
+<table>
+<tr>
+<td width="50%">
+
+### 🌐 **Multi-Source Support**
+> Fetch from **Wallhaven** and other premium sources
+> - 🔍 Advanced search capabilities
+> - 🏷️ Category-based filtering
+> - ⭐ Quality-rated content
+
+### 🧠 **Smart Intelligence**
+> Intelligent duplicate detection & management
+> - 🔐 SHA256 checksum verification
+> - 📊 Metadata tracking
+> - 🗃️ SQLite database backend
+
+### ⚡ **Performance Optimized**
+> Lightning-fast concurrent downloads
+> - 🔧 Configurable worker pools
+> - 📈 Batch processing
+> - 💾 Efficient storage management
+
+</td>
+<td width="50%">
+
+### 🎨 **Advanced Filtering**
+> Precision control over your collection
+> - 📐 Resolution & aspect ratio filters
+> - 🎭 Category & tag-based sorting
+> - 🖼️ Orientation preferences
+
+### 🖥️ **Cross-Platform Ready**
+> Seamless experience across platforms
+> - 🐧 **Linux** (Primary focus)
+> - 🍎 **macOS** compatibility
+> - 🪟 **Windows** support
+
+### 🛠️ **Developer Experience**
+> Modern CLI with professional features
+> - 🐚 Shell completions (Bash/Zsh/Fish)
+> - 📋 Rich configuration options
+> - 🔄 Easy automation & scripting
+
+</td>
+</tr>
+</table>
+
+---
+
+<div align="center">
+
+### 🎪 **Feature Highlights**
+
+| Feature | Description | Status |
+|---------|-------------|---------|
+| **🔄 Concurrent Downloads** | Multi-threaded downloading for maximum speed | ✅ **Active** |
+| **🔍 Smart Deduplication** | Never download the same wallpaper twice | ✅ **Active** |
+| **📱 Interactive Browser** | Preview wallpapers directly in terminal | ✅ **Active** |
+| **🗂️ Collection Management** | Organize, prune, and maintain your library | ✅ **Active** |
+| **⚙️ Flexible Configuration** | YAML config with environment variable support | ✅ **Active** |
+| **🎯 Precision Filtering** | Fine-grained control over wallpaper selection | ✅ **Active** |
+
+</div>
 
 ## 📦 Installation
 
