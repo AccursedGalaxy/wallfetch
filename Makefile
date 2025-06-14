@@ -20,7 +20,7 @@ BINDIR=$(PREFIX)/bin
 # Build flags
 LDFLAGS=-ldflags "-s -w"
 
-.PHONY: all build clean test install uninstall deps update-deps
+.PHONY: all build clean test install uninstall deps update-deps completions
 
 # Default target
 all: build
@@ -80,6 +80,12 @@ dev-build:
 run:
 	$(GOBUILD) -o $(BINARY_NAME) $(BINARY_PATH) && ./$(BINARY_NAME)
 
+# Generate shell completions
+completions: build
+	@echo "Generating shell completions..."
+	@chmod +x scripts/generate-completions.sh
+	@./scripts/generate-completions.sh $(BUILD_DIR)/$(BINARY_NAME) completions
+
 # Show help
 help:
 	@echo "Available targets:"
@@ -93,4 +99,5 @@ help:
 	@echo "  uninstall    - Remove binary from $(BINDIR)"
 	@echo "  dev-build    - Quick build for development"
 	@echo "  run          - Build and run the application"
+	@echo "  completions  - Generate shell completions"
 	@echo "  help         - Show this help message" 

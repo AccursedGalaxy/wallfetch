@@ -1,212 +1,273 @@
 # WallFetch
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go Report Card](https://goreportcard.com/badge/github.com/AccursedGalaxy/wallfetch)](https://goreportcard.com/report/github.com/AccursedGalaxy/wallfetch)
+<div align="center">
 
-A powerful CLI tool to fetch and manage wallpapers from various sources with intelligent duplicate detection and local library management.
-
-## ✨ Features
-
-- **Multi-Source Support**: Fetch wallpapers from popular sources like Wallhaven
-- **Smart Duplicate Detection**: Prevents downloading duplicates using SHA256 checksums and source IDs
-- **Local Library Management**: Organize, browse, and prune your wallpaper collection
-- **Flexible Filtering**: Sort by trending, categories, tags, and more
-- **Automated Scheduling**: Set up cron jobs for periodic wallpaper fetching
-- **Lightweight Database**: SQLite-based metadata storage for fast operations
-- **Cross-Platform**: Works on Linux, macOS, and Windows
-
-## 🚀 Installation
-
-### From Source
-
-1. **Prerequisites**: Ensure you have Go 1.21+ installed
-2. **Clone and build**:
-   ```bash
-   git clone https://github.com/AccursedGalaxy/wallfetch.git
-   cd wallfetch
-   make build
-   ```
-3. **Install globally** (optional):
-   ```bash
-   sudo make install
-   ```
-
-### Quick Setup
-
-1. **Initialize configuration**:
-   ```bash
-   wallfetch config init
-   ```
-2. **Edit your config** at `~/.config/wallfetch/config.yaml`:
-   ```yaml
-   api_keys:
-     wallhaven: "your_api_key_here"  # Get from https://wallhaven.cc/settings/account
-   ```
-3. **Test the setup**:
-   ```bash
-   wallfetch config show
-   ```
-
-## 📖 Usage
-
-### Basic Commands
-
-#### Fetch Wallpapers
-
-```bash
-# Fetch trending anime wallpapers from Wallhaven
-wallfetch fetch wallhaven --sort toplist --categories anime --limit 5
-
-# Fetch with specific resolution  
-wallfetch fetch wallhaven --resolution 1920x1080 --limit 10
-
-# Fetch from multiple categories
-wallfetch fetch wallhaven --categories "anime,nature" --sort toplist
+```
+██╗    ██╗ █████╗ ██╗     ██╗     ███████╗███████╗████████╗ ██████╗██╗  ██╗
+██║    ██║██╔══██╗██║     ██║     ██╔════╝██╔════╝╚══██╔══╝██╔════╝██║  ██║
+██║ █╗ ██║███████║██║     ██║     █████╗  █████╗     ██║   ██║     ███████║
+██║███╗██║██╔══██║██║     ██║     ██╔══╝  ██╔══╝     ██║   ██║     ██╔══██║
+╚███╔███╔╝██║  ██║███████╗███████╗██║     ███████╗   ██║   ╚██████╗██║  ██║
+ ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ╚══════╝   ╚═╝    ╚═════╝╚═╝  ╚═╝
 ```
 
-#### Manage Your Collection
+**Professional Wallpaper Management for Linux**
 
+[![Go Version](https://img.shields.io/github/go-mod/go-version/AccursedGalaxy/wallfetch)](https://golang.org/)
+[![License](https://img.shields.io/github/license/AccursedGalaxy/wallfetch)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/AccursedGalaxy/wallfetch)](https://github.com/AccursedGalaxy/wallfetch/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/AccursedGalaxy/wallfetch/release.yml)](https://github.com/AccursedGalaxy/wallfetch/actions)
+
+</div>
+
+## 🚀 Features
+
+- **Multiple Sources**: Fetch wallpapers from Wallhaven and other sources
+- **Smart Filtering**: Filter by resolution, aspect ratio, categories, and more
+- **Duplicate Detection**: Intelligent duplicate detection using SHA256 checksums
+- **Database Management**: Local SQLite database for metadata and file tracking
+- **Concurrent Downloads**: Configurable worker pools for fast downloads
+- **Cross-Platform**: Support for Linux, macOS, and Windows
+- **Professional CLI**: Modern command-line interface with shell completions
+
+## 📦 Installation
+
+### Quick Install (Recommended)
+
+**One-liner installation for Linux/macOS:**
 ```bash
-# List all downloaded wallpapers
+curl -fsSL https://raw.githubusercontent.com/AccursedGalaxy/wallfetch/main/scripts/install.sh | bash
+```
+
+### Package Managers
+
+#### Go Install
+If you have Go installed:
+```bash
+go install github.com/AccursedGalaxy/wallfetch/cmd/wallfetch@latest
+```
+
+#### Arch Linux (AUR)
+```bash
+# Using yay
+yay -S wallfetch
+
+# Using paru
+paru -S wallfetch
+
+# Manual
+git clone https://aur.archlinux.org/wallfetch.git
+cd wallfetch
+makepkg -si
+```
+
+#### Ubuntu/Debian
+```bash
+# Download latest .deb package
+wget https://github.com/AccursedGalaxy/wallfetch/releases/latest/download/wallfetch_amd64.deb
+sudo dpkg -i wallfetch_amd64.deb
+sudo apt-get install -f  # Fix dependencies if needed
+```
+
+### Manual Installation
+
+#### Pre-built Binaries
+1. Download the latest release for your platform from [GitHub Releases](https://github.com/AccursedGalaxy/wallfetch/releases)
+2. Extract and move to your PATH:
+```bash
+# Linux x64
+wget https://github.com/AccursedGalaxy/wallfetch/releases/latest/download/wallfetch-linux-amd64
+chmod +x wallfetch-linux-amd64
+sudo mv wallfetch-linux-amd64 /usr/local/bin/wallfetch
+```
+
+#### Build from Source
+```bash
+git clone https://github.com/AccursedGalaxy/wallfetch.git
+cd wallfetch
+make build
+sudo make install
+```
+
+## 🛠️ Quick Start
+
+### 1. Initialize Configuration
+```bash
+wallfetch config init
+```
+
+### 2. Set Your API Key
+Get your free API key from [Wallhaven](https://wallhaven.cc/settings/account) and add it to `~/.config/wallfetch/config.yaml`:
+```yaml
+wallhaven:
+  api_key: "your_api_key_here"
+```
+
+### 3. Fetch Wallpapers
+```bash
+# Fetch 10 wallpapers
+wallfetch fetch wallhaven --limit 10
+
+# Fetch with specific filters
+wallfetch fetch wallhaven --limit 5 --resolution 1920x1080 --categories general
+
+# Fetch ultrawide wallpapers
+wallfetch fetch wallhaven --limit 5 --aspect-ratio 21x9 --only-landscape
+```
+
+### 4. Manage Your Collection
+```bash
+# List downloaded wallpapers
 wallfetch list
 
-# List with detailed information
-wallfetch list --verbose
-
-# List with filtering
-wallfetch list --source wallhaven --limit 20
-
-# Browse wallpapers (planned feature)
+# Browse wallpapers in your collection
 wallfetch browse
 
-# Browse specific source (planned feature)
-wallfetch browse wallhaven --limit 10
-```
-
-#### Collection Maintenance
-
-```bash
-# Keep only the 100 most recent wallpapers
-wallfetch prune --keep 100
-
-# Remove duplicates (dry run)
-wallfetch dedupe --dry-run
+# Clean up database (remove entries for deleted files)
+wallfetch cleanup
 
 # Remove duplicates
 wallfetch dedupe
 ```
 
-### Advanced Usage
+## ⚙️ Configuration
 
-#### Batch Operations
+### Default Configuration Location
+- **Linux**: `~/.config/wallfetch/config.yaml`
+- **macOS**: `~/.config/wallfetch/config.yaml`
+- **Windows**: `%APPDATA%\wallfetch\config.yaml`
 
-```bash
-# Fetch from multiple sources
-wallfetch fetch wallhaven --categories anime --limit 5
-wallfetch fetch unsplash --query "nature" --limit 5
-
-# Set up automated fetching (add to crontab)
-# Fetch 10 new wallpapers daily at 9 AM
-0 9 * * * /usr/local/bin/wallfetch fetch wallhaven --categories anime --limit 10
-```
-
-#### Custom Download Directory
-
-```bash
-# Set custom download directory
-wallfetch fetch wallhaven --output ~/Pictures/Wallpapers --categories nature
-
-# Use config file
-wallfetch --config ~/.config/wallfetch/config.yaml fetch wallhaven
-```
-
-## 🗂️ Database Schema
-
-WallFetch stores metadata in a SQLite database (`~/.local/share/wallfetch/wallpapers.db`):
-
-```sql
-CREATE TABLE images (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    source TEXT NOT NULL,
-    source_id TEXT NOT NULL,
-    url TEXT NOT NULL,
-    local_path TEXT NOT NULL,
-    checksum TEXT NOT NULL,
-    tags TEXT,
-    resolution TEXT,
-    file_size INTEGER,
-    downloaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-## 🔄 Duplicate Detection
-
-WallFetch uses a two-layer approach to prevent duplicates:
-
-1. **Source ID Check**: Prevents re-downloading the same image from the same source
-2. **SHA256 Checksum**: Detects identical images from different sources or URLs
-
-Process:
-
-```
-Download → Compute SHA256 → Check Database → Save if Unique
-```
-
-## 📊 Current Status
-
-### ✅ Working Features
-- **Wallhaven API Integration**: Full search and download support
-- **Database Management**: SQLite-based metadata storage
-- **Duplicate Detection**: Both source ID and checksum-based
-- **Concurrent Downloads**: Configurable worker pool
-- **Configuration Management**: YAML-based config system
-- **CLI Interface**: Full command-line interface with help
-
-### 🚧 Planned Features
-- **Browse Command**: Open wallpapers in image viewer
-- **Prune Command**: Remove old wallpapers
-- **Dedupe Command**: Remove duplicate files
-- **Additional Sources**: Unsplash, Reddit support
-
-## 🛠️ Supported Sources
-
-| Source    | Status     | Features                               |
-|-----------|------------|----------------------------------------|
-| Wallhaven | ✅ Active  | Categories, tags, sorting, resolutions |
-| Unsplash  | 🚧 Planned | Collections, search, user galleries    |
-| Reddit    | 🚧 Planned | Subreddit scraping, top posts          |
-
-## ⚙️ Configuration File
-
-Create `~/.config/wallfetch/config.yaml`:
-
+### Sample Configuration
 ```yaml
-# Default settings
-default_source: wallhaven
-download_dir: ~/Pictures/Wallpapers
+default_source: "wallhaven"
+download_dir: "~/Pictures/Wallpapers"
 max_concurrent: 5
 
-# API Keys
-api_keys:
-  wallhaven: "your_api_key_here"
-
-# Default fetch options
+wallhaven:
+  api_key: "your_api_key_here"
+  
 defaults:
-  wallhaven:
-    categories: "anime,nature"
-    resolution: "1920x1080"
-    sort: "toplist"
-    limit: 10
-
-# Database settings
+  limit: 10
+  resolution: "1920x1080"
+  sort: "toplist"
+  only_landscape: true
+  
+filters:
+  min_width: 1920
+  min_height: 1080
+  aspect_ratios: ["16x9", "21x9"]
+  
 database:
-  path: "~/.local/share/wallfetch/wallpapers.db"
-  auto_vacuum: true
+  path: "~/.local/share/wallfetch/wallfetch.db"
 ```
 
-## 🤝 Contributing
+### Environment Variables
+You can also set configuration via environment variables:
+```bash
+export WALLHAVEN_API_KEY="your_api_key_here"
+export WALLFETCH_DOWNLOAD_DIR="~/Pictures/Wallpapers"
+```
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## 🎯 Usage Examples
+
+### Basic Usage
+```bash
+# Fetch 10 random wallpapers
+wallfetch fetch wallhaven
+
+# Fetch with specific category
+wallfetch fetch wallhaven --categories anime --limit 5
+
+# Fetch top wallpapers
+wallfetch fetch wallhaven --sort toplist --limit 10
+```
+
+### Advanced Filtering
+```bash
+# Ultrawide only
+wallfetch fetch wallhaven --aspect-ratio 21x9 --only-landscape --limit 5
+
+# High resolution wallpapers
+wallfetch fetch wallhaven --min-resolution 2560x1440 --limit 10
+
+# Multiple categories
+wallfetch fetch wallhaven --categories general,anime --limit 15
+```
+
+### Database Management
+```bash
+# Show configuration
+wallfetch config show
+
+# List all wallpapers with file status
+wallfetch list
+
+# Clean up orphaned database entries
+wallfetch cleanup --dry-run  # Preview changes
+wallfetch cleanup             # Apply cleanup
+
+# Remove duplicates
+wallfetch dedupe
+
+# Delete specific wallpaper
+wallfetch delete 12345       # By database ID
+wallfetch delete --source-id abc123  # By source ID
+```
+
+## 🐚 Shell Completions
+
+Enable shell completions for a better CLI experience:
+
+### Bash
+```bash
+# Linux
+wallfetch completion bash | sudo tee /etc/bash_completion.d/wallfetch
+
+# macOS
+wallfetch completion bash > $(brew --prefix)/etc/bash_completion.d/wallfetch
+```
+
+### Zsh
+```bash
+wallfetch completion zsh > "${fpath[1]}/_wallfetch"
+```
+
+### Fish
+```bash
+wallfetch completion fish > ~/.config/fish/completions/wallfetch.fish
+```
+
+## 🔧 Development
+
+### Prerequisites
+- Go 1.21 or higher
+- Make (optional, for using Makefile)
+
+### Building
+```bash
+# Clone the repository
+git clone https://github.com/AccursedGalaxy/wallfetch.git
+cd wallfetch
+
+# Build
+make build
+
+# Install locally
+make install
+
+# Run tests
+make test
+
+# Clean build artifacts
+make clean
+```
+
+### Contributing
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📄 License
 
@@ -214,15 +275,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [Wallhaven](https://wallhaven.cc/) for their excellent API
-- The Go community for amazing libraries and tools
+- [Wallhaven](https://wallhaven.cc/) for providing the wallpaper API
+- [Cobra](https://github.com/spf13/cobra) for the excellent CLI framework
+- [SQLite](https://www.sqlite.org/) for the embedded database
 
 ## 📞 Support
 
-- 🐛 Found a bug? [Open an issue](https://github.com/AccursedGalaxy/wallfetch/issues)
-- 💡 Have a feature request? [Start a discussion](https://github.com/AccursedGalaxy/wallfetch/discussions)
-- 📧 Need help? Check out the [documentation](https://github.com/AccursedGalaxy/wallfetch/wiki)
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/AccursedGalaxy/wallfetch/issues)
+- 💡 **Feature Requests**: [GitHub Issues](https://github.com/AccursedGalaxy/wallfetch/issues)
+- 📚 **Documentation**: [Wiki](https://github.com/AccursedGalaxy/wallfetch/wiki)
 
 ---
 
-⭐ If you find WallFetch useful, please consider giving it a star on GitHub!
+<div align="center">
+Made with ❤️ for the Linux community
+</div>

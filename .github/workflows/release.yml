@@ -1,0 +1,143 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: ""
+          - goos: linux
+            goarch: arm64
+            suffix: ""
+          - goos: darwin
+            goarch: amd64
+            suffix: ""
+          - goos: darwin
+            goarch: arm64
+            suffix: ""
+          - goos: windows
+            goarch: amd64
+            suffix: ".exe"
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Get dependencies
+      run: go mod download
+
+    - name: Build binary
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+        CGO_ENABLED: 0
+      run: |
+        mkdir -p dist
+        go build -ldflags="-s -w -X main.Version=${{ github.ref_name }}" \
+          -o dist/wallfetch-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }} \
+          ./cmd/wallfetch
+
+    - name: Generate completions (Linux only)
+      if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+      run: |
+        chmod +x scripts/generate-completions.sh
+        ./scripts/generate-completions.sh dist/wallfetch-${{ matrix.goos }}-${{ matrix.goarch }} completions
+        tar -czf dist/wallfetch-completions.tar.gz completions/
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: wallfetch-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: dist/wallfetch-*
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        merge-multiple: true
+        path: dist
+
+    - name: Generate checksums
+      run: |
+        cd dist
+        sha256sum * > checksums.txt
+        cat checksums.txt
+
+    - name: Extract changelog
+      id: changelog
+      run: |
+        # Extract changelog for this version from CHANGELOG.md if it exists
+        if [ -f "CHANGELOG.md" ]; then
+          # Try to extract changelog between this version and previous version
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          sed -n "/^## \[${GITHUB_REF_NAME#v}\]/,/^## \[/p" CHANGELOG.md | head -n -1 | tail -n +2 >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "CHANGELOG=New release of WallFetch" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/*
+        body: |
+          ## 🎉 WallFetch ${{ github.ref_name }}
+          
+          ### Installation
+          
+          **Quick Install (Linux/macOS):**
+          ```bash
+          curl -fsSL https://raw.githubusercontent.com/AccursedGalaxy/wallfetch/main/scripts/install.sh | bash
+          ```
+          
+          **Go Install:**
+          ```bash
+          go install github.com/AccursedGalaxy/wallfetch/cmd/wallfetch@${{ github.ref_name }}
+          ```
+          
+          **Manual Download:**
+          Download the appropriate binary for your system below.
+          
+          ### Checksums
+          ```
+          $(cat dist/checksums.txt)
+          ```
+          
+          ### Changes
+          ${{ steps.changelog.outputs.CHANGELOG }}
+          
+          ### Platform Support
+          - ✅ Linux (amd64, arm64)
+          - ✅ macOS (amd64, arm64) 
+          - ✅ Windows (amd64)
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

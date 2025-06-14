@@ -1,0 +1,17 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+%:
+	dh $@ --buildsystem=golang --with=golang
+
+override_dh_auto_build:
+	go build -v -ldflags="-s -w" -o wallfetch ./cmd/wallfetch
+
+override_dh_auto_install:
+	dh_auto_install
+	mkdir -p debian/wallfetch/usr/bin
+	cp wallfetch debian/wallfetch/usr/bin/
+
+override_dh_auto_test:
+	go test -short ./... 

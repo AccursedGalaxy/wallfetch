@@ -36,6 +36,7 @@ with intelligent duplicate detection and local library management.`,
 	app.rootCmd.AddCommand(app.newDeleteCmd())
 	app.rootCmd.AddCommand(app.newCleanupCmd())
 	app.rootCmd.AddCommand(app.newConfigCmd())
+	app.rootCmd.AddCommand(app.newCompletionCmd())
 
 	return app
 }
@@ -92,4 +93,60 @@ func (a *App) newConfigCmd() *cobra.Command {
 	cmd.AddCommand(initCmd)
 
 	return cmd
+}
+
+// newCompletionCmd creates the completion command
+func (a *App) newCompletionCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "completion [bash|zsh|fish|powershell]",
+		Short: "Generate shell completion script",
+		Long: `Generate shell completion script for wallfetch.
+
+To load completions:
+
+Bash:
+  # Linux:
+  $ wallfetch completion bash > /etc/bash_completion.d/wallfetch
+  # macOS:
+  $ wallfetch completion bash > $(brew --prefix)/etc/bash_completion.d/wallfetch
+
+Zsh:
+  # If shell completion is not already enabled in your environment,
+  # you will need to enable it.  You can execute the following once:
+  $ echo "autoload -U compinit; compinit" >> ~/.zshrc
+
+  # To load completions for each session, execute once:
+  $ wallfetch completion zsh > "${fpath[1]}/_wallfetch"
+
+Fish:
+  $ wallfetch completion fish | source
+
+  # To load completions for each session, execute once:
+  $ wallfetch completion fish > ~/.config/fish/completions/wallfetch.fish
+
+PowerShell:
+  PS> wallfetch completion powershell | Out-String | Invoke-Expression
+
+  # To load completions for every new session, run:
+  PS> wallfetch completion powershell > wallfetch.ps1
+  # and source this file from your PowerShell profile.
+`,
+		DisableFlagsInUseLine: true,
+		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+		Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			switch args[0] {
+			case "bash":
+				return a.rootCmd.GenBashCompletion(cmd.OutOrStdout())
+			case "zsh":
+				return a.rootCmd.GenZshCompletion(cmd.OutOrStdout())
+			case "fish":
+				return a.rootCmd.GenFishCompletion(cmd.OutOrStdout(), true)
+			case "powershell":
+				return a.rootCmd.GenPowerShellCompletionWithDesc(cmd.OutOrStdout())
+			default:
+				return cmd.Help()
+			}
+		},
+	}
 }

@@ -1,0 +1,26 @@
+Source: wallfetch
+Section: utils
+Priority: optional
+Maintainer: AccursedGalaxy <your-email@example.com>
+Build-Depends: debhelper-compat (= 13), golang-go (>= 2:1.18~)
+Standards-Version: 4.6.0
+Homepage: https://github.com/AccursedGalaxy/wallfetch
+Vcs-Git: https://github.com/AccursedGalaxy/wallfetch.git
+Vcs-Browser: https://github.com/AccursedGalaxy/wallfetch
+
+Package: wallfetch
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Recommends: curl, wget
+Description: Professional wallpaper fetching and management CLI tool
+ WallFetch is a powerful command-line tool for fetching and managing
+ wallpapers from various sources with intelligent duplicate detection
+ and local library management.
+ .
+ Features:
+  * Fetch wallpapers from Wallhaven and other sources
+  * Intelligent duplicate detection using SHA256 checksums
+  * Smart filtering by resolution, aspect ratio, and categories
+  * Local database for metadata management
+  * Concurrent downloads with configurable worker pools
+  * Cross-platform support for Linux, macOS, and Windows 
