@@ -1,7 +1,4 @@
-# WallFetch
-
 <div align="center">
-
 ```
 ██╗    ██╗ █████╗ ██╗     ██╗     ███████╗███████╗████████╗ ██████╗██╗  ██╗
 ██║    ██║██╔══██╗██║     ██║     ██╔════╝██╔════╝╚══██╔══╝██╔════╝██║  ██║
@@ -10,7 +7,8 @@
 ╚███╔███╔╝██║  ██║███████╗███████╗██║     ███████╗   ██║   ╚██████╗██║  ██║
  ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ╚══════╝   ╚═╝    ╚═════╝╚═╝  ╚═╝
 ```
-
+</div>
+<div align="center">
 **Professional Wallpaper Management for Linux**
 
 [![Go Version](https://img.shields.io/github/go-mod/go-version/AccursedGalaxy/wallfetch)](https://golang.org/)
@@ -154,18 +152,18 @@ max_concurrent: 5
 
 wallhaven:
   api_key: "your_api_key_here"
-  
+
 defaults:
   limit: 10
   resolution: "1920x1080"
   sort: "toplist"
   only_landscape: true
-  
+
 filters:
   min_width: 1920
   min_height: 1080
   aspect_ratios: ["16x9", "21x9"]
-  
+
 database:
   path: "~/.local/share/wallfetch/wallfetch.db"
 ```
