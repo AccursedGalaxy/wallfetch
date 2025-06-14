@@ -76,15 +76,13 @@ check_dependencies() {
 }
 
 get_latest_release() {
-    log_info "Getting latest release information..."
-    
     local api_url="https://api.github.com/repos/$REPO/releases/latest"
     local latest_release
     
     latest_release=$(curl -fsSL "$api_url" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
     
     if [ -z "$latest_release" ]; then
-        log_error "Failed to get latest release information"
+        log_error "Failed to get latest release information" >&2
         exit 1
     fi
     
@@ -96,14 +94,14 @@ download_binary() {
     local download_url="https://github.com/$REPO/releases/download/$version/${BINARY_NAME}-${OS}-${ARCH}"
     local temp_file="/tmp/${BINARY_NAME}"
     
-    log_info "Downloading WallFetch $version for $OS-$ARCH..."
+    log_info "Downloading WallFetch $version for $OS-$ARCH..." >&2
     
     if curl -fsSL "$download_url" -o "$temp_file"; then
         chmod +x "$temp_file"
-        log_success "Downloaded successfully"
+        log_success "Downloaded successfully" >&2
         echo "$temp_file"
     else
-        log_error "Failed to download binary from $download_url"
+        log_error "Failed to download binary from $download_url" >&2
         exit 1
     fi
 }
@@ -190,6 +188,7 @@ main() {
     
     check_dependencies
     
+    log_info "Getting latest release information..."
     local version
     version=$(get_latest_release)
     log_info "Latest version: $version"
