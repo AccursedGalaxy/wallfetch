@@ -15,38 +15,76 @@ A powerful CLI tool to fetch and manage wallpapers from various sources with int
 - **Lightweight Database**: SQLite-based metadata storage for fast operations
 - **Cross-Platform**: Works on Linux, macOS, and Windows
 
+## 🚀 Installation
+
+### From Source
+
+1. **Prerequisites**: Ensure you have Go 1.21+ installed
+2. **Clone and build**:
+   ```bash
+   git clone https://github.com/AccursedGalaxy/wallfetch.git
+   cd wallfetch
+   make build
+   ```
+3. **Install globally** (optional):
+   ```bash
+   sudo make install
+   ```
+
+### Quick Setup
+
+1. **Initialize configuration**:
+   ```bash
+   wallfetch config init
+   ```
+2. **Edit your config** at `~/.config/wallfetch/config.yaml`:
+   ```yaml
+   api_keys:
+     wallhaven: "your_api_key_here"  # Get from https://wallhaven.cc/settings/account
+   ```
+3. **Test the setup**:
+   ```bash
+   wallfetch config show
+   ```
+
 ## 📖 Usage
 
 ### Basic Commands
 
 #### Fetch Wallpapers
+
 ```bash
 # Fetch trending anime wallpapers from Wallhaven
-wallfetch fetch wallhaven --sort toplist --categories anime --page 1
+wallfetch fetch wallhaven --sort toplist --categories anime --limit 5
 
-# Fetch with specific resolution
+# Fetch with specific resolution  
 wallfetch fetch wallhaven --resolution 1920x1080 --limit 10
 
 # Fetch from multiple categories
-wallfetch fetch wallhaven --categories "anime,nature" --sort hot
+wallfetch fetch wallhaven --categories "anime,nature" --sort toplist
 ```
 
 #### Manage Your Collection
+
 ```bash
 # List all downloaded wallpapers
 wallfetch list
 
+# List with detailed information
+wallfetch list --verbose
+
 # List with filtering
 wallfetch list --source wallhaven --limit 20
 
-# Browse wallpapers (opens in default image viewer)
+# Browse wallpapers (planned feature)
 wallfetch browse
 
-# Browse specific source
+# Browse specific source (planned feature)
 wallfetch browse wallhaven --limit 10
 ```
 
 #### Collection Maintenance
+
 ```bash
 # Keep only the 100 most recent wallpapers
 wallfetch prune --keep 100
@@ -61,6 +99,7 @@ wallfetch dedupe
 ### Advanced Usage
 
 #### Batch Operations
+
 ```bash
 # Fetch from multiple sources
 wallfetch fetch wallhaven --categories anime --limit 5
@@ -72,6 +111,7 @@ wallfetch fetch unsplash --query "nature" --limit 5
 ```
 
 #### Custom Download Directory
+
 ```bash
 # Set custom download directory
 wallfetch fetch wallhaven --output ~/Pictures/Wallpapers --categories nature
@@ -107,9 +147,26 @@ WallFetch uses a two-layer approach to prevent duplicates:
 2. **SHA256 Checksum**: Detects identical images from different sources or URLs
 
 Process:
+
 ```
 Download → Compute SHA256 → Check Database → Save if Unique
 ```
+
+## 📊 Current Status
+
+### ✅ Working Features
+- **Wallhaven API Integration**: Full search and download support
+- **Database Management**: SQLite-based metadata storage
+- **Duplicate Detection**: Both source ID and checksum-based
+- **Concurrent Downloads**: Configurable worker pool
+- **Configuration Management**: YAML-based config system
+- **CLI Interface**: Full command-line interface with help
+
+### 🚧 Planned Features
+- **Browse Command**: Open wallpapers in image viewer
+- **Prune Command**: Remove old wallpapers
+- **Dedupe Command**: Remove duplicate files
+- **Additional Sources**: Unsplash, Reddit support
 
 ## 🛠️ Supported Sources
 
