@@ -61,44 +61,32 @@
 <tr>
 <td width="50%">
 
-### 🌐 **Multi-Source Support**
-> Fetch from **Wallhaven** and other premium sources
-> - 🔍 Advanced search capabilities
-> - 🏷️ Category-based filtering
-> - ⭐ Quality-rated content
+**🌐 Multi-Source Support**  
+Fetch from **Wallhaven** and other premium sources  
+• 🔍 Advanced search • 🏷️ Category filtering • ⭐ Quality-rated content
 
-### 🧠 **Smart Intelligence**
-> Intelligent duplicate detection & management
-> - 🔐 SHA256 checksum verification
-> - 📊 Metadata tracking
-> - 🗃️ SQLite database backend
+**🧠 Smart Intelligence**  
+Intelligent duplicate detection & management  
+• 🔐 SHA256 verification • 📊 Metadata tracking • 🗃️ SQLite backend
 
-### ⚡ **Performance Optimized**
-> Lightning-fast concurrent downloads
-> - 🔧 Configurable worker pools
-> - 📈 Batch processing
-> - 💾 Efficient storage management
+**⚡ Performance Optimized**  
+Lightning-fast concurrent downloads  
+• 🔧 Worker pools • 📈 Batch processing • 💾 Storage management
 
 </td>
 <td width="50%">
 
-### 🎨 **Advanced Filtering**
-> Precision control over your collection
-> - 📐 Resolution & aspect ratio filters
-> - 🎭 Category & tag-based sorting
-> - 🖼️ Orientation preferences
+**🎨 Advanced Filtering**  
+Precision control over your collection  
+• 📐 Resolution filters • 🎭 Category sorting • 🖼️ Orientation prefs
 
-### 🖥️ **Cross-Platform Ready**
-> Seamless experience across platforms
-> - 🐧 **Linux** (Primary focus)
-> - 🍎 **macOS** compatibility
-> - 🪟 **Windows** support
+**🖥️ Cross-Platform Ready**  
+Seamless experience across platforms  
+• 🐧 **Linux** (Primary) • 🍎 **macOS** • 🪟 **Windows**
 
-### 🛠️ **Developer Experience**
-> Modern CLI with professional features
-> - 🐚 Shell completions (Bash/Zsh/Fish)
-> - 📋 Rich configuration options
-> - 🔄 Easy automation & scripting
+**🛠️ Developer Experience**  
+Modern CLI with professional features  
+• 🐚 Shell completions • 📋 Rich config • 🔄 Easy automation
 
 </td>
 </tr>
