@@ -24,7 +24,7 @@ func NewApp(cfg *config.Config) *App {
 		Short: "A powerful CLI tool to fetch and manage wallpapers",
 		Long: `WallFetch is a powerful CLI tool to fetch and manage wallpapers from various sources 
 with intelligent duplicate detection and local library management.`,
-		Version: "1.0.0",
+		Version: "1.1.0",
 	}
 
 	// Add subcommands

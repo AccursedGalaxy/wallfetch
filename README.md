@@ -123,11 +123,20 @@ wallfetch list
 # Browse wallpapers in your collection
 wallfetch browse
 
+# Browse with terminal preview (requires chafa or viu)
+wallfetch browse --preview --interactive
+
+# Browse random wallpapers with external viewer
+wallfetch browse --random --viewer feh
+
 # Clean up database (remove entries for deleted files)
 wallfetch cleanup
 
-# Remove duplicates
+# Remove duplicates (with confirmation)
 wallfetch dedupe
+
+# Prune old wallpapers, keep only 50 most recent
+wallfetch prune --keep 50
 ```
 
 ## ⚙️ Configuration
@@ -206,8 +215,13 @@ wallfetch list
 wallfetch cleanup --dry-run  # Preview changes
 wallfetch cleanup             # Apply cleanup
 
-# Remove duplicates
-wallfetch dedupe
+# Remove duplicates with confirmation
+wallfetch dedupe --dry-run    # Preview what would be deleted
+wallfetch dedupe              # Actually remove duplicates
+
+# Prune old wallpapers intelligently
+wallfetch prune --keep 100 --dry-run  # Preview pruning
+wallfetch prune --keep 100            # Keep only 100 most recent
 
 # Delete specific wallpaper
 wallfetch delete 12345       # By database ID
