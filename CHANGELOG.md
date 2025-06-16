@@ -49,4 +49,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Concurrent downloads with configurable worker pools
 - YAML configuration system
 - Complete CLI interface with fetch, list, browse, cleanup, delete, prune, and dedupe commands
-- Cross-platform support for Linux, macOS, and Windows 
+- Cross-platform support for Linux, macOS, and Windows
