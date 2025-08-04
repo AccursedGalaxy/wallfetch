@@ -67,7 +67,7 @@ jobs:
         CC: ${{ matrix.goos == 'linux' && matrix.goarch == 'arm64' && 'aarch64-linux-gnu-gcc' || 'gcc' }}
       run: |
         mkdir -p dist
-        go build -ldflags="-s -w -X main.Version=${{ github.ref_name }}" \
+        go build -ldflags="-s -w -X github.com/AccursedGalaxy/wallfetch/internal/cli.Version=${{ github.ref_name }}" \
           -o dist/wallfetch-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }} \
           ./cmd/wallfetch
 
