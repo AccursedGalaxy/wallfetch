@@ -89,6 +89,7 @@
 | **🗂️ Collection Management** | Organize, prune, and maintain your library | ✅ **Active** |
 | **⚙️ Flexible Configuration** | YAML config with environment variable support | ✅ **Active** |
 | **🎯 Precision Filtering** | Fine-grained control over wallpaper selection | ✅ **Active** |
+| **🤖 Weekly Automation** | Automated weekly wallpaper fetching with systemd | ✅ **Active** |
 
 </div>
 
@@ -151,6 +152,9 @@ git clone https://github.com/AccursedGalaxy/wallfetch.git
 cd wallfetch
 make build
 sudo make install
+
+# Optional: Set up weekly automation (Linux only)
+./scripts/install-weekly-automation.sh
 ```
 
 ## 🛠️ Quick Start
@@ -291,6 +295,107 @@ wallfetch prune --keep 100            # Keep only 100 most recent
 wallfetch delete 12345       # By database ID
 wallfetch delete --source-id abc123  # By source ID
 ```
+
+## 🤖 Weekly Automation
+
+**WallFetch** includes a powerful automation system that can automatically fetch fresh wallpapers weekly using systemd timers. Perfect for keeping your wallpaper collection constantly updated with minimal effort.
+
+### ✨ **Automation Features**
+
+- **🕐 Scheduled Fetching**: Automatically runs weekly with randomized delay
+- **⚙️ Configurable Categories**: Customize which wallpaper categories to fetch
+- **📊 Smart Filtering**: Ensures minimum resolution and quality standards
+- **🔄 Auto-Cleanup**: Maintains collection size by removing old wallpapers
+- **📝 Detailed Logging**: Track all fetch operations and results
+- **💬 Desktop Notifications**: Get notified when new wallpapers are added
+- **🎯 No Duplicates**: Leverages WallFetch's built-in deduplication
+
+### 🚀 **Quick Setup**
+
+Install the automation system with a single command:
+
+```bash
+# Using the installation script
+./scripts/install-weekly-automation.sh
+
+# Or using make targets (requires git clone)
+make install-automation
+
+# Check status
+./scripts/install-weekly-automation.sh status
+# or
+make automation-status
+
+# Remove automation if needed
+./scripts/install-weekly-automation.sh uninstall
+# or  
+make uninstall-automation
+```
+
+### ⚙️ **Configuration**
+
+The automation creates a configuration file at `~/.config/weekly-wallpaper-fetch.conf`:
+
+```bash
+# Weekly Wallpaper Fetch Configuration
+# Categories to fetch (comma-separated)
+CATEGORIES="anime,city"
+
+# Number of wallpapers to fetch per category
+LIMIT=5
+
+# Minimum resolution required
+RESOLUTION="3440x1440"
+
+# Sort method (toplist, date_added, relevance, random, views, favorites)
+SORT="toplist"
+
+# Content purity (sfw, sketchy, nsfw)
+PURITY="sfw"
+```
+
+### 📋 **Manual Script Usage**
+
+You can also run the automation script manually:
+
+```bash
+# Create default configuration
+./scripts/weekly-wallpaper-fetch.sh --config
+
+# Fetch wallpapers now
+./scripts/weekly-wallpaper-fetch.sh --fetch
+
+# Check current status
+./scripts/weekly-wallpaper-fetch.sh --status
+
+# View recent logs
+./scripts/weekly-wallpaper-fetch.sh --logs
+```
+
+### 🔧 **Automation Management**
+
+Monitor and control your automation:
+
+```bash
+# Check systemd timer status
+systemctl --user status weekly-wallpaper-fetch.timer
+
+# View next scheduled runs
+systemctl --user list-timers weekly-wallpaper-fetch.timer
+
+# Manually trigger a fetch
+systemctl --user start weekly-wallpaper-fetch.service
+
+# View service logs
+journalctl --user -u weekly-wallpaper-fetch.service -f
+```
+
+### 📅 **Schedule Details**
+
+- **Frequency**: Every 7 days
+- **Startup Delay**: 5 minutes after boot
+- **Random Delay**: Up to 1 hour (to distribute server load)
+- **Persistence**: Runs missed schedules after system wake-up
 
 ## 🐚 Shell Completions
 

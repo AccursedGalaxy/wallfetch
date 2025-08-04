@@ -1,0 +1,19 @@
+[Unit]
+Description=Weekly Wallpaper Fetch Service
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/Projects/wallfetch/scripts/weekly-wallpaper-fetch.sh --fetch
+Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_RUNTIME_DIR=/run/user/%i
+WorkingDirectory=%h/Projects/wallfetch
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical-session.target 

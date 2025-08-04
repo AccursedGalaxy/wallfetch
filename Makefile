@@ -20,7 +20,7 @@ BINDIR=$(PREFIX)/bin
 # Build flags
 LDFLAGS=-ldflags "-s -w"
 
-.PHONY: all build clean test install uninstall deps update-deps completions
+.PHONY: all build clean test install uninstall deps update-deps completions install-automation uninstall-automation automation-status
 
 # Default target
 all: build
@@ -86,18 +86,39 @@ completions: build
 	@chmod +x scripts/generate-completions.sh
 	@./scripts/generate-completions.sh $(BUILD_DIR)/$(BINARY_NAME) completions
 
+# Install weekly automation (Linux only)
+install-automation:
+	@echo "Installing weekly wallpaper automation..."
+	@chmod +x scripts/install-weekly-automation.sh
+	@./scripts/install-weekly-automation.sh install
+
+# Uninstall weekly automation
+uninstall-automation:
+	@echo "Uninstalling weekly wallpaper automation..."
+	@chmod +x scripts/install-weekly-automation.sh
+	@./scripts/install-weekly-automation.sh uninstall
+
+# Show automation status
+automation-status:
+	@echo "Checking automation status..."
+	@chmod +x scripts/install-weekly-automation.sh
+	@./scripts/install-weekly-automation.sh status
+
 # Show help
 help:
 	@echo "Available targets:"
-	@echo "  build        - Build the binary"
-	@echo "  build-all    - Build for multiple platforms"
-	@echo "  clean        - Clean build artifacts"
-	@echo "  test         - Run tests"
-	@echo "  deps         - Install dependencies"
-	@echo "  update-deps  - Update dependencies"
-	@echo "  install      - Install binary to $(BINDIR)"
-	@echo "  uninstall    - Remove binary from $(BINDIR)"
-	@echo "  dev-build    - Quick build for development"
-	@echo "  run          - Build and run the application"
-	@echo "  completions  - Generate shell completions"
-	@echo "  help         - Show this help message" 
+	@echo "  build              - Build the binary"
+	@echo "  build-all          - Build for multiple platforms"
+	@echo "  clean              - Clean build artifacts"
+	@echo "  test               - Run tests"
+	@echo "  deps               - Install dependencies"
+	@echo "  update-deps        - Update dependencies"
+	@echo "  install            - Install binary to $(BINDIR)"
+	@echo "  uninstall          - Remove binary from $(BINDIR)"
+	@echo "  dev-build          - Quick build for development"
+	@echo "  run                - Build and run the application"
+	@echo "  completions        - Generate shell completions"
+	@echo "  install-automation - Install weekly wallpaper automation (Linux)"
+	@echo "  uninstall-automation - Remove weekly wallpaper automation"
+	@echo "  automation-status  - Show automation status"
+	@echo "  help               - Show this help message" 
