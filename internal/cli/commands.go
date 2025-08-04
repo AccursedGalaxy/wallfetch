@@ -2,10 +2,14 @@ package cli
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -1028,4 +1032,293 @@ func (a *App) runCleanup(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// newUpdateCmd creates the update command
+func (a *App) newUpdateCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update wallfetch to the latest version",
+		Long:  "Check for and install the latest version of wallfetch",
+		RunE:  a.runUpdate,
+	}
+
+	cmd.Flags().BoolP("check", "c", false, "Only check for updates without installing")
+	cmd.Flags().BoolP("force", "f", false, "Force update even if already on latest version")
+
+	return cmd
+}
+
+// runUpdate handles the update command
+func (a *App) runUpdate(cmd *cobra.Command, args []string) error {
+	checkOnly, _ := cmd.Flags().GetBool("check")
+	force, _ := cmd.Flags().GetBool("force")
+
+	// Get current version
+	currentVersion := a.rootCmd.Version
+
+	fmt.Printf("Current version: %s\n", currentVersion)
+
+	// Get latest release info from GitHub
+	fmt.Println("Checking for updates...")
+
+	latestVersion, downloadURL, err := a.getLatestReleaseInfo()
+	if err != nil {
+		return fmt.Errorf("failed to check for updates: %w", err)
+	}
+
+	fmt.Printf("Latest version: %s\n", latestVersion)
+
+	// Normalize versions for comparison (remove "v" prefix and "-dirty" suffix)
+	currentVersionClean := strings.TrimPrefix(currentVersion, "v")
+	currentVersionClean = strings.Split(currentVersionClean, "-")[0]
+	latestVersionClean := strings.TrimPrefix(latestVersion, "v")
+
+	// Compare versions
+	if currentVersionClean == latestVersionClean && !force {
+		fmt.Println("✅ You are already on the latest version!")
+		return nil
+	}
+
+	if checkOnly {
+		if currentVersionClean != latestVersionClean {
+			fmt.Printf("🆕 Update available: %s → %s\n", currentVersion, latestVersion)
+			fmt.Println("Run 'wallfetch update' to install the latest version")
+		}
+		return nil
+	}
+
+	// Find current installation path
+	execPath, err := a.findWallfetchPath()
+	if err != nil {
+		return fmt.Errorf("failed to find wallfetch installation: %w", err)
+	}
+
+	fmt.Printf("Found wallfetch at: %s\n", execPath)
+
+	// Ask for confirmation
+	fmt.Printf("\n⚠️  This will update wallfetch from %s to %s\n", currentVersion, latestVersion)
+	fmt.Printf("Installation path: %s\n", execPath)
+	fmt.Print("Do you want to continue? [y/N]: ")
+
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read input: %w", err)
+	}
+
+	response = strings.ToLower(strings.TrimSpace(response))
+	if response != "y" && response != "yes" {
+		fmt.Println("❌ Update cancelled")
+		return nil
+	}
+
+	// Download new binary
+	fmt.Printf("\n📥 Downloading wallfetch %s...\n", latestVersion)
+
+	tempFile, err := a.downloadBinary(downloadURL)
+	if err != nil {
+		return fmt.Errorf("failed to download update: %w", err)
+	}
+	defer os.Remove(tempFile)
+
+	// Make it executable
+	if err := os.Chmod(tempFile, 0755); err != nil {
+		return fmt.Errorf("failed to set executable permissions: %w", err)
+	}
+
+	// Backup current binary
+	backupPath := execPath + ".backup"
+	fmt.Printf("📦 Creating backup at %s...\n", backupPath)
+
+	// Check if we need sudo
+	needSudo := false
+	if err := os.Rename(execPath, backupPath); err != nil {
+		if os.IsPermission(err) {
+			needSudo = true
+		} else {
+			return fmt.Errorf("failed to create backup: %w", err)
+		}
+	} else {
+		// Restore the original for now
+		os.Rename(backupPath, execPath)
+	}
+
+	// Replace binary
+	fmt.Println("🔄 Installing new version...")
+
+	if needSudo {
+		fmt.Println("🔐 Administrator privileges required...")
+
+		// Use sudo to backup and replace
+		backupCmd := exec.Command("sudo", "mv", execPath, backupPath)
+		if err := backupCmd.Run(); err != nil {
+			return fmt.Errorf("failed to create backup with sudo: %w", err)
+		}
+
+		installCmd := exec.Command("sudo", "cp", tempFile, execPath)
+		if err := installCmd.Run(); err != nil {
+			// Try to restore backup
+			restoreCmd := exec.Command("sudo", "mv", backupPath, execPath)
+			restoreCmd.Run()
+			return fmt.Errorf("failed to install update: %w", err)
+		}
+
+		// Remove backup
+		removeCmd := exec.Command("sudo", "rm", "-f", backupPath)
+		removeCmd.Run()
+	} else {
+		// Direct file operations
+		if err := os.Rename(execPath, backupPath); err != nil {
+			return fmt.Errorf("failed to create backup: %w", err)
+		}
+
+		if err := copyFile(tempFile, execPath); err != nil {
+			// Try to restore backup
+			os.Rename(backupPath, execPath)
+			return fmt.Errorf("failed to install update: %w", err)
+		}
+
+		// Set permissions
+		if err := os.Chmod(execPath, 0755); err != nil {
+			fmt.Printf("⚠️  Warning: failed to set permissions: %v\n", err)
+		}
+
+		// Remove backup
+		os.Remove(backupPath)
+	}
+
+	fmt.Printf("\n✅ Successfully updated to %s!\n", latestVersion)
+	fmt.Println("🎉 Please run 'wallfetch --version' to verify the update")
+
+	return nil
+}
+
+// getLatestReleaseInfo fetches the latest release information from GitHub
+func (a *App) getLatestReleaseInfo() (version string, downloadURL string, err error) {
+	repo := "AccursedGalaxy/wallfetch"
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
+
+	resp, err := http.Get(apiURL)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+	}
+
+	var release struct {
+		TagName string `json:"tag_name"`
+		Assets  []struct {
+			Name               string `json:"name"`
+			BrowserDownloadURL string `json:"browser_download_url"`
+		} `json:"assets"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return "", "", err
+	}
+
+	version = release.TagName
+
+	// Find the right asset for current platform
+	osName := runtime.GOOS
+	archName := runtime.GOARCH
+	if archName == "amd64" {
+		archName = "amd64"
+	}
+
+	assetName := fmt.Sprintf("wallfetch-%s-%s", osName, archName)
+
+	for _, asset := range release.Assets {
+		if asset.Name == assetName {
+			downloadURL = asset.BrowserDownloadURL
+			break
+		}
+	}
+
+	if downloadURL == "" {
+		return "", "", fmt.Errorf("no binary found for %s-%s", osName, archName)
+	}
+
+	return version, downloadURL, nil
+}
+
+// findWallfetchPath finds the current wallfetch binary path
+func (a *App) findWallfetchPath() (string, error) {
+	// First, try to get the path of the current executable
+	execPath, err := os.Executable()
+	if err == nil {
+		// Resolve any symlinks
+		realPath, err := filepath.EvalSymlinks(execPath)
+		if err == nil {
+			return realPath, nil
+		}
+		return execPath, nil
+	}
+
+	// Fallback: use which command
+	path, err := exec.LookPath("wallfetch")
+	if err != nil {
+		return "", fmt.Errorf("wallfetch not found in PATH")
+	}
+
+	// Resolve symlinks
+	realPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return path, nil
+	}
+
+	return realPath, nil
+}
+
+// downloadBinary downloads the binary from the given URL
+func (a *App) downloadBinary(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("download failed with status %d", resp.StatusCode)
+	}
+
+	// Create temp file
+	tempFile, err := os.CreateTemp("", "wallfetch-update-*")
+	if err != nil {
+		return "", err
+	}
+	defer tempFile.Close()
+
+	// Download with progress
+	written, err := io.Copy(tempFile, resp.Body)
+	if err != nil {
+		os.Remove(tempFile.Name())
+		return "", err
+	}
+
+	fmt.Printf("✅ Downloaded %.2f MB\n", float64(written)/(1024*1024))
+
+	return tempFile.Name(), nil
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src, dst string) error {
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+	return err
 }

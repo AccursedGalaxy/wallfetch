@@ -13,12 +13,15 @@ BINARY_NAME=wallfetch
 BINARY_PATH=./cmd/wallfetch
 BUILD_DIR=build
 
+# Version info
+VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+
 # Install paths
 PREFIX?=/usr/local
 BINDIR=$(PREFIX)/bin
 
 # Build flags
-LDFLAGS=-ldflags "-s -w"
+LDFLAGS=-ldflags "-s -w -X github.com/AccursedGalaxy/wallfetch/internal/cli.Version=$(VERSION)"
 
 .PHONY: all build clean test install uninstall deps update-deps completions install-automation uninstall-automation automation-status
 

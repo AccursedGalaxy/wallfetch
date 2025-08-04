@@ -7,6 +7,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Version is set at build time via ldflags
+var Version = "dev"
+
 // App represents the CLI application
 type App struct {
 	config  *config.Config
@@ -24,7 +27,7 @@ func NewApp(cfg *config.Config) *App {
 		Short: "A powerful CLI tool to fetch and manage wallpapers",
 		Long: `WallFetch is a powerful CLI tool to fetch and manage wallpapers from various sources 
 with intelligent duplicate detection and local library management.`,
-		Version: "1.1.0",
+		Version: Version,
 	}
 
 	// Add subcommands
@@ -37,6 +40,7 @@ with intelligent duplicate detection and local library management.`,
 	app.rootCmd.AddCommand(app.newCleanupCmd())
 	app.rootCmd.AddCommand(app.newConfigCmd())
 	app.rootCmd.AddCommand(app.newCompletionCmd())
+	app.rootCmd.AddCommand(app.newUpdateCmd())
 
 	return app
 }

@@ -75,6 +75,61 @@ check_dependencies() {
     log_success "All dependencies satisfied"
 }
 
+check_existing_installations() {
+    log_info "Checking for existing installations..."
+    
+    # Common installation locations
+    local install_locations=(
+        "$HOME/go/bin/wallfetch"
+        "$HOME/.local/bin/wallfetch"
+        "/usr/local/bin/wallfetch"
+        "/usr/bin/wallfetch"
+    )
+    
+    local found_installations=()
+    local current_wallfetch=""
+    
+    # Check which wallfetch is in PATH
+    if command -v wallfetch >/dev/null 2>&1; then
+        current_wallfetch=$(command -v wallfetch)
+        log_info "Found wallfetch in PATH: $current_wallfetch"
+        
+        # Get version if possible
+        local current_version=$(wallfetch --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+        log_info "Current version: $current_version"
+    fi
+    
+    # Check all common locations
+    for location in "${install_locations[@]}"; do
+        if [ -f "$location" ]; then
+            found_installations+=("$location")
+        fi
+    done
+    
+    # Report findings
+    if [ ${#found_installations[@]} -gt 1 ]; then
+        log_warning "Multiple wallfetch installations found:"
+        for install in "${found_installations[@]}"; do
+            echo "  - $install"
+        done
+        
+        # If we're updating to /usr/local/bin and there's one in ~/go/bin
+        if [[ "$INSTALL_DIR/$BINARY_NAME" == "/usr/local/bin/wallfetch" ]] && [[ " ${found_installations[@]} " =~ " $HOME/go/bin/wallfetch " ]]; then
+            log_info "You have wallfetch in ~/go/bin which may take precedence in PATH"
+            log_info "Consider removing it with: rm ~/go/bin/wallfetch"
+            echo
+            read -p "Would you like to remove ~/go/bin/wallfetch? [y/N]: " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                rm -f "$HOME/go/bin/wallfetch"
+                log_success "Removed ~/go/bin/wallfetch"
+            fi
+        fi
+    elif [ ${#found_installations[@]} -eq 1 ]; then
+        log_info "Existing installation found at: ${found_installations[0]}"
+    fi
+}
+
 get_latest_release() {
     local api_url="https://api.github.com/repos/$REPO/releases/latest"
     local latest_release
@@ -151,9 +206,18 @@ verify_installation() {
     log_info "Verifying installation..."
     
     if command -v "$BINARY_NAME" >/dev/null 2>&1; then
+        local installed_path=$(command -v "$BINARY_NAME")
         local version
         version=$("$BINARY_NAME" --version 2>/dev/null | head -1 || echo "unknown")
         log_success "WallFetch is installed and working: $version"
+        log_info "Using binary at: $installed_path"
+        
+        # Check if it's the one we just installed
+        if [[ "$installed_path" != "$INSTALL_DIR/$BINARY_NAME" ]]; then
+            log_warning "The wallfetch in your PATH ($installed_path) is not the one just installed ($INSTALL_DIR/$BINARY_NAME)"
+            log_info "You may need to adjust your PATH or remove the other installation"
+        fi
+        
         return 0
     else
         log_error "Installation verification failed"
@@ -187,6 +251,7 @@ main() {
     fi
     
     check_dependencies
+    check_existing_installations
     
     log_info "Getting latest release information..."
     local version
