@@ -34,6 +34,8 @@ with intelligent duplicate detection and local library management.`,
 	app.rootCmd.AddCommand(app.newFetchCmd())
 	app.rootCmd.AddCommand(app.newListCmd())
 	app.rootCmd.AddCommand(app.newBrowseCmd())
+	app.rootCmd.AddCommand(app.newFavoritesCmd())
+	app.rootCmd.AddCommand(app.newImportCmd())
 	app.rootCmd.AddCommand(app.newPruneCmd())
 	app.rootCmd.AddCommand(app.newDedupeCmd())
 	app.rootCmd.AddCommand(app.newDeleteCmd())

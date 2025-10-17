@@ -27,6 +27,7 @@ type Image struct {
 	Resolution   string    `json:"resolution"`
 	FileSize     int64     `json:"file_size"`
 	DownloadedAt time.Time `json:"downloaded_at"`
+	Favorite     bool      `json:"favorite"`
 }
 
 // Open opens the database connection
@@ -72,6 +73,7 @@ func (db *DB) init() error {
 		resolution TEXT,
 		file_size INTEGER,
 		downloaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		favorite BOOLEAN DEFAULT FALSE,
 		UNIQUE(source, source_id),
 		UNIQUE(checksum)
 	);
@@ -79,20 +81,32 @@ func (db *DB) init() error {
 	CREATE INDEX IF NOT EXISTS idx_source ON images(source);
 	CREATE INDEX IF NOT EXISTS idx_checksum ON images(checksum);
 	CREATE INDEX IF NOT EXISTS idx_downloaded_at ON images(downloaded_at);
+	CREATE INDEX IF NOT EXISTS idx_favorite ON images(favorite);
 	`
 
 	_, err := db.conn.Exec(schema)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Migration: add favorite column if it doesn't exist (for backward compatibility)
+	migration := `
+	ALTER TABLE images ADD COLUMN favorite BOOLEAN DEFAULT FALSE;
+	`
+	// This will fail silently if the column already exists
+	db.conn.Exec(migration)
+
+	return nil
 }
 
 // InsertImage inserts a new image record
 func (db *DB) InsertImage(img *Image) error {
 	query := `
-	INSERT INTO images (source, source_id, url, local_path, checksum, tags, resolution, file_size)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO images (source, source_id, url, local_path, checksum, tags, resolution, file_size, favorite)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err := db.conn.Exec(query, img.Source, img.SourceID, img.URL, img.LocalPath,
-		img.Checksum, img.Tags, img.Resolution, img.FileSize)
+		img.Checksum, img.Tags, img.Resolution, img.FileSize, img.Favorite)
 	return err
 }
 
@@ -114,7 +128,7 @@ func (db *DB) ExistsByChecksum(checksum string) (bool, error) {
 
 // ListImages lists images with optional filtering
 func (db *DB) ListImages(source string, limit int) ([]Image, error) {
-	query := `SELECT id, source, source_id, url, local_path, checksum, tags, resolution, file_size, downloaded_at FROM images`
+	query := `SELECT id, source, source_id, url, local_path, checksum, tags, resolution, file_size, downloaded_at, favorite FROM images`
 	args := []interface{}{}
 
 	if source != "" {
@@ -139,7 +153,7 @@ func (db *DB) ListImages(source string, limit int) ([]Image, error) {
 	for rows.Next() {
 		var img Image
 		err := rows.Scan(&img.ID, &img.Source, &img.SourceID, &img.URL, &img.LocalPath,
-			&img.Checksum, &img.Tags, &img.Resolution, &img.FileSize, &img.DownloadedAt)
+			&img.Checksum, &img.Tags, &img.Resolution, &img.FileSize, &img.DownloadedAt, &img.Favorite)
 		if err != nil {
 			return nil, err
 		}
@@ -200,11 +214,11 @@ func (db *DB) DeleteOldImages(keepCount int) ([]string, error) {
 // FindDuplicates finds duplicate images by checksum
 func (db *DB) FindDuplicates() ([][]Image, error) {
 	query := `
-	SELECT id, source, source_id, url, local_path, checksum, tags, resolution, file_size, downloaded_at
-	FROM images 
+	SELECT id, source, source_id, url, local_path, checksum, tags, resolution, file_size, downloaded_at, favorite
+	FROM images
 	WHERE checksum IN (
-		SELECT checksum FROM images 
-		GROUP BY checksum 
+		SELECT checksum FROM images
+		GROUP BY checksum
 		HAVING COUNT(*) > 1
 	)
 	ORDER BY checksum, downloaded_at
@@ -220,7 +234,7 @@ func (db *DB) FindDuplicates() ([][]Image, error) {
 	for rows.Next() {
 		var img Image
 		err := rows.Scan(&img.ID, &img.Source, &img.SourceID, &img.URL, &img.LocalPath,
-			&img.Checksum, &img.Tags, &img.Resolution, &img.FileSize, &img.DownloadedAt)
+			&img.Checksum, &img.Tags, &img.Resolution, &img.FileSize, &img.DownloadedAt, &img.Favorite)
 		if err != nil {
 			return nil, err
 		}
@@ -301,12 +315,90 @@ func (db *DB) CleanupMissingFiles() ([]string, error) {
 
 // GetImageByID gets an image by ID
 func (db *DB) GetImageByID(id int) (*Image, error) {
-	query := `SELECT id, source, source_id, url, local_path, checksum, tags, resolution, file_size, downloaded_at FROM images WHERE id = ?`
+	query := `SELECT id, source, source_id, url, local_path, checksum, tags, resolution, file_size, downloaded_at, favorite FROM images WHERE id = ?`
 	var img Image
 	err := db.conn.QueryRow(query, id).Scan(&img.ID, &img.Source, &img.SourceID, &img.URL, &img.LocalPath,
-		&img.Checksum, &img.Tags, &img.Resolution, &img.FileSize, &img.DownloadedAt)
+		&img.Checksum, &img.Tags, &img.Resolution, &img.FileSize, &img.DownloadedAt, &img.Favorite)
 	if err != nil {
 		return nil, err
 	}
 	return &img, nil
+}
+
+// ToggleFavorite toggles the favorite status of an image
+func (db *DB) ToggleFavorite(id int) error {
+	query := `UPDATE images SET favorite = NOT favorite WHERE id = ?`
+	result, err := db.conn.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("image with ID %d not found", id)
+	}
+
+	return nil
+}
+
+// SetFavorite sets the favorite status of an image
+func (db *DB) SetFavorite(id int, favorite bool) error {
+	query := `UPDATE images SET favorite = ? WHERE id = ?`
+	result, err := db.conn.Exec(query, favorite, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("image with ID %d not found", id)
+	}
+
+	return nil
+}
+
+// ListFavorites lists all favorite images
+func (db *DB) ListFavorites(limit int) ([]Image, error) {
+	query := `SELECT id, source, source_id, url, local_path, checksum, tags, resolution, file_size, downloaded_at, favorite FROM images WHERE favorite = TRUE ORDER BY downloaded_at DESC`
+	args := []interface{}{}
+
+	if limit > 0 {
+		query += ` LIMIT ?`
+		args = append(args, limit)
+	}
+
+	rows, err := db.conn.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var images []Image
+	for rows.Next() {
+		var img Image
+		err := rows.Scan(&img.ID, &img.Source, &img.SourceID, &img.URL, &img.LocalPath,
+			&img.Checksum, &img.Tags, &img.Resolution, &img.FileSize, &img.DownloadedAt, &img.Favorite)
+		if err != nil {
+			return nil, err
+		}
+		images = append(images, img)
+	}
+
+	return images, rows.Err()
+}
+
+// CountFavorites returns the number of favorite images
+func (db *DB) CountFavorites() (int, error) {
+	query := `SELECT COUNT(*) FROM images WHERE favorite = TRUE`
+	var count int
+	err := db.conn.QueryRow(query).Scan(&count)
+	return count, err
 }

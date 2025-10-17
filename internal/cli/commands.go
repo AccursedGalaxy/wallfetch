@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +14,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/AccursedGalaxy/wallfetch/internal/database"
 	"github.com/AccursedGalaxy/wallfetch/internal/downloader"
@@ -68,7 +72,7 @@ func (a *App) newBrowseCmd() *cobra.Command {
 		RunE:  a.runBrowse,
 	}
 
-	cmd.Flags().IntP("limit", "l", 10, "Number of wallpapers to browse")
+	cmd.Flags().IntP("limit", "l", 100, "Number of wallpapers to browse (0 for all)")
 	cmd.Flags().BoolP("random", "r", false, "Browse random wallpapers")
 	cmd.Flags().BoolP("preview", "p", false, "Show image preview in terminal")
 	cmd.Flags().String("viewer", "", "External image viewer command (e.g., 'feh', 'eog', 'open')")
@@ -451,7 +455,7 @@ func (a *App) runBrowse(cmd *cobra.Command, args []string) error {
 
 	// Interactive browsing mode
 	if interactive {
-		return a.runInteractiveBrowse(images, previewManager, viewer, preview)
+		return a.runInteractiveBrowse(images, db, previewManager, viewer, preview)
 	}
 
 	// Non-interactive mode - show all
@@ -505,22 +509,84 @@ func (a *App) runBrowse(cmd *cobra.Command, args []string) error {
 }
 
 // runInteractiveBrowse runs the interactive browsing mode
-func (a *App) runInteractiveBrowse(images []database.Image, previewManager *PreviewManager, viewer string, preview bool) error {
-	fmt.Println("🎮 Interactive Browsing Mode")
-	fmt.Println("Commands: [n]ext, [p]rev, [o]pen, [i]nfo, [q]uit, [h]elp")
+func (a *App) runInteractiveBrowse(images []database.Image, db *database.DB, previewManager *PreviewManager, viewer string, preview bool) error {
+	var viewerCmd *exec.Cmd
+	var viewerRunning bool
+	var tempImagePath string
+
+	// Create temporary file for the current image
+	tempFile, err := os.CreateTemp("", "wallfetch-current-*.jpg")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tempImagePath = tempFile.Name()
+	tempFile.Close()
+	defer os.Remove(tempImagePath) // Clean up on exit
+
+	// Function to update the viewer
+	updateViewer := func(imageIndex int) {
+		imagePath := images[imageIndex].LocalPath
+
+		// Copy current image to temp file
+		if err := a.copyFile(imagePath, tempImagePath); err != nil {
+			fmt.Printf("Failed to copy image: %v\n", err)
+			return
+		}
+
+		// If viewer is not running, start it with the first image
+		if !viewerRunning {
+			if viewer != "" {
+				viewerCmd = exec.Command(viewer, tempImagePath)
+				viewerRunning = true
+
+				// Start viewer in background
+				if err := viewerCmd.Start(); err != nil {
+					fmt.Printf("Failed to open viewer: %v\n", err)
+					viewerRunning = false
+					return
+				}
+			}
+		}
+		// Note: We don't update the viewer during navigation since imv doesn't support reloading
+		// The viewer stays open with the first image, providing a persistent window experience
+		// Users can press 'o' to open the current image in a new window if needed
+	}
+
+	// Function to cleanup viewer on exit
+	cleanupViewer := func() {
+		if viewerRunning && viewerCmd != nil && viewerCmd.Process != nil {
+			viewerCmd.Process.Kill()
+			viewerCmd.Wait()
+		}
+	}
+
+	// Ensure cleanup on exit
+	defer cleanupViewer()
+	fmt.Printf("🎮 Interactive Browsing Mode (%d wallpapers)", len(images))
+	if viewer != "" {
+		fmt.Printf(" (external viewer: %s)", viewer)
+	}
+	fmt.Println()
+	fmt.Println("Commands: [n]ext, [p]rev, [f]avorite, [d]elete, [o]pen, [i]nfo, [q]uit, [h]elp")
 	fmt.Println()
 
 	currentIndex := 0
 
+	// Open initial image in viewer
+	if len(images) > 0 {
+		updateViewer(0)
+	}
+
 	for {
-		img := images[currentIndex]
+		img := &images[currentIndex]
 
 		// Clear screen (simple version)
 		fmt.Print("\033[H\033[2J")
 
 		fmt.Printf("═══ Wallpaper %d/%d ═══\n", currentIndex+1, len(images))
 
-		if preview && previewManager.CanPreview() {
+		// Skip inline preview if external viewer is active (to avoid confusion)
+		if preview && previewManager.CanPreview() && !viewerRunning {
 			if err := previewManager.PreviewImage(img.LocalPath); err != nil {
 				fmt.Printf("Preview failed: %v\n", err)
 			}
@@ -529,7 +595,11 @@ func (a *App) runInteractiveBrowse(images []database.Image, previewManager *Prev
 		fmt.Printf("\nID: %d | %s (%s) | %s\n", img.ID, img.Source, img.SourceID, img.Resolution)
 		fmt.Printf("File: %s\n", filepath.Base(img.LocalPath))
 
-		fmt.Printf("\n[n]ext [p]rev [o]pen [i]nfo [q]uit [h]elp > ")
+		favoriteStatus := "☆"
+		if img.Favorite {
+			favoriteStatus = "★"
+		}
+		fmt.Printf("\n[%s] [n]ext [p]rev [f]avorite [d]elete [o]pen [i]nfo [q]uit [h]elp > ", favoriteStatus)
 
 		reader := bufio.NewReader(os.Stdin)
 		input, err := reader.ReadString('\n')
@@ -542,8 +612,80 @@ func (a *App) runInteractiveBrowse(images []database.Image, previewManager *Prev
 		switch command {
 		case "n", "next", "":
 			currentIndex = (currentIndex + 1) % len(images)
+			updateViewer(currentIndex)
 		case "p", "prev":
 			currentIndex = (currentIndex - 1 + len(images)) % len(images)
+			updateViewer(currentIndex)
+		case "f", "favorite":
+			// Toggle favorite status
+			err := db.ToggleFavorite(img.ID)
+			if err != nil {
+				fmt.Printf("Failed to toggle favorite: %v\nPress Enter to continue...", err)
+				reader.ReadString('\n')
+			} else {
+				// Update the image in our slice to reflect the change
+				img.Favorite = !img.Favorite
+				status := "added to"
+				if !img.Favorite {
+					status = "removed from"
+				}
+				fmt.Printf("Wallpaper %s favorites!\nPress Enter to continue...", status)
+				reader.ReadString('\n')
+			}
+		case "d", "delete":
+			// Confirm deletion
+			fmt.Printf("\n⚠️  Are you sure you want to delete this wallpaper?\n")
+			fmt.Printf("File: %s\n", filepath.Base(img.LocalPath))
+			fmt.Printf("ID: %d | %s (%s) | %s\n", img.ID, img.Source, img.SourceID, img.Resolution)
+			fmt.Print("Type 'yes' to confirm deletion: ")
+
+			confirmInput, _ := reader.ReadString('\n')
+			confirmInput = strings.ToLower(strings.TrimSpace(confirmInput))
+
+			if confirmInput == "yes" {
+				// Delete from database and file
+				localPath, err := db.DeleteImage(img.ID)
+				if err != nil {
+					fmt.Printf("Failed to delete from database: %v\nPress Enter to continue...", err)
+					reader.ReadString('\n')
+				} else {
+					// Try to delete the file too
+					if err := os.Remove(localPath); err != nil && !os.IsNotExist(err) {
+						fmt.Printf("Deleted from database but failed to remove file: %v\nPress Enter to continue...", err)
+						reader.ReadString('\n')
+					} else {
+						fmt.Printf("✅ Wallpaper deleted successfully!\n")
+
+						// Remove from our images slice and adjust index
+						images = append(images[:currentIndex], images[currentIndex+1:]...)
+
+						// If we deleted the last image, quit
+						if len(images) == 0 {
+							fmt.Printf("No more wallpapers to browse.\n")
+							return nil
+						}
+
+						// Adjust current index if necessary
+						if currentIndex >= len(images) {
+							currentIndex = len(images) - 1
+						}
+
+						// Update viewer with new current image
+						if len(images) > 0 {
+							updateViewer(currentIndex)
+						} else {
+							// No more images, close viewer
+							cleanupViewer()
+						}
+
+						fmt.Printf("Press Enter to continue...")
+						reader.ReadString('\n')
+					}
+				}
+			} else {
+				fmt.Printf("Deletion cancelled.\nPress Enter to continue...")
+				reader.ReadString('\n')
+			}
 		case "o", "open":
 			if viewer != "" {
 				if err := a.openWithViewer(img.LocalPath, viewer); err != nil {
@@ -564,6 +706,7 @@ func (a *App) runInteractiveBrowse(images []database.Image, previewManager *Prev
 			fmt.Printf("File Size: %.2f MB\n", float64(img.FileSize)/(1024*1024))
 			fmt.Printf("Downloaded: %s\n", img.DownloadedAt.Format("2006-01-02 15:04:05"))
 			fmt.Printf("Checksum: %s\n", img.Checksum)
+			fmt.Printf("Favorite: %t\n", img.Favorite)
 			if img.Tags != "" {
 				fmt.Printf("Tags: %s\n", img.Tags)
 			}
@@ -576,6 +719,8 @@ func (a *App) runInteractiveBrowse(images []database.Image, previewManager *Prev
 			fmt.Printf("Interactive Browsing Commands:\n")
 			fmt.Printf("  n, next, Enter  - Next wallpaper\n")
 			fmt.Printf("  p, prev         - Previous wallpaper\n")
+			fmt.Printf("  f, favorite     - Toggle favorite status\n")
+			fmt.Printf("  d, delete       - Delete current wallpaper\n")
 			fmt.Printf("  o, open         - Open with external viewer\n")
 			fmt.Printf("  i, info         - Show detailed information\n")
 			fmt.Printf("  q, quit         - Quit browsing\n")
@@ -923,6 +1068,39 @@ func (a *App) newCleanupCmd() *cobra.Command {
 	return cmd
 }
 
+// newFavoritesCmd creates the favorites command
+func (a *App) newFavoritesCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "favorites",
+		Short: "Manage favorite wallpapers",
+		Long:  "List, add, or remove favorite wallpapers",
+		RunE:  a.runFavorites,
+	}
+
+	cmd.Flags().IntP("limit", "l", 50, "Limit number of results")
+	cmd.Flags().BoolP("interactive", "i", false, "Interactive browsing mode for favorites")
+	cmd.Flags().BoolP("preview", "p", false, "Show image preview in terminal")
+	cmd.Flags().String("viewer", "", "External image viewer command")
+	cmd.Flags().BoolP("verbose", "v", false, "Show detailed information")
+
+	return cmd
+}
+
+// newImportCmd creates the import command
+func (a *App) newImportCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "import [directory]",
+		Short: "Import existing wallpapers into the database",
+		Long:  "Scan a directory for wallpaper files and add them to the database",
+		RunE:  a.runImport,
+	}
+
+	cmd.Flags().BoolP("dry-run", "d", false, "Show what would be imported without actually importing")
+	cmd.Flags().StringP("source", "s", "local", "Source name for imported wallpapers")
+
+	return cmd
+}
+
 // runDelete handles the delete command
 func (a *App) runDelete(cmd *cobra.Command, args []string) error {
 	deleteFile, _ := cmd.Flags().GetBool("file")
@@ -1032,6 +1210,356 @@ func (a *App) runCleanup(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// runFavorites handles the favorites command
+func (a *App) runFavorites(cmd *cobra.Command, args []string) error {
+	// Get flags
+	limit, _ := cmd.Flags().GetInt("limit")
+	interactive, _ := cmd.Flags().GetBool("interactive")
+	preview, _ := cmd.Flags().GetBool("preview")
+	viewer, _ := cmd.Flags().GetString("viewer")
+	verbose, _ := cmd.Flags().GetBool("verbose")
+
+	// Open database
+	db, err := database.Open(a.config.Database.Path)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer db.Close()
+
+	// Get favorite images
+	images, err := db.ListFavorites(limit)
+	if err != nil {
+		return fmt.Errorf("failed to list favorite images: %w", err)
+	}
+
+	if len(images) == 0 {
+		fmt.Println("No favorite wallpapers found.")
+		fmt.Println("Use 'wallfetch browse --interactive' to mark wallpapers as favorites!")
+		return nil
+	}
+
+	// Interactive mode
+	if interactive {
+		previewManager := NewPreviewManager()
+
+		// Check if preview is requested but no tools available
+		if preview && !previewManager.CanPreview() {
+			fmt.Printf("⚠️  Preview mode requested but no preview tools available.\n")
+			fmt.Printf("Available tool: %s\n", previewManager.GetAvailableToolName())
+			previewManager.InstallInstructions()
+			fmt.Printf("\nContinuing without preview...\n\n")
+			preview = false
+		}
+
+		// Auto-detect viewer if not specified
+		if viewer == "" {
+			viewer = a.detectImageViewer()
+		}
+
+		fmt.Printf("🖼️  Browsing %d favorite wallpapers", len(images))
+		fmt.Println()
+
+		if preview && previewManager.CanPreview() {
+			fmt.Printf("🔍 Using %s for terminal preview\n", previewManager.GetAvailableToolName())
+		}
+		if viewer != "" {
+			fmt.Printf("👁️  External viewer: %s\n", viewer)
+		}
+		fmt.Println()
+
+		return a.runInteractiveBrowse(images, db, previewManager, viewer, preview)
+	}
+
+	// Non-interactive mode - just list
+	fmt.Printf("Showing %d favorite wallpapers:\n\n", len(images))
+
+	// Display images
+	for _, img := range images {
+		// Check if file exists
+		fileExists := true
+		if _, err := os.Stat(img.LocalPath); os.IsNotExist(err) {
+			fileExists = false
+		}
+
+		if verbose {
+			fmt.Printf("ID: %d\n", img.ID)
+			fmt.Printf("Source: %s (%s)\n", img.Source, img.SourceID)
+			fmt.Printf("Resolution: %s\n", img.Resolution)
+			fmt.Printf("File Size: %.2f MB\n", float64(img.FileSize)/(1024*1024))
+			fmt.Printf("Local Path: %s", img.LocalPath)
+			if !fileExists {
+				fmt.Printf(" ❌ (FILE MISSING)")
+			}
+			fmt.Printf("\n")
+			fmt.Printf("Tags: %s\n", img.Tags)
+			fmt.Printf("Downloaded: %s\n", img.DownloadedAt.Format("2006-01-02 15:04:05"))
+			fmt.Printf("Checksum: %s\n", img.Checksum[:16]+"...")
+			fmt.Println(strings.Repeat("-", 50))
+		} else {
+			status := "✅"
+			if !fileExists {
+				status = "❌"
+			}
+			fmt.Printf("%s %-8s | %-12s | %-15s | %s\n",
+				status,
+				img.SourceID,
+				img.Resolution,
+				img.DownloadedAt.Format("2006-01-02 15:04"),
+				img.LocalPath)
+		}
+	}
+
+	return nil
+}
+
+// runImport handles the import command
+func (a *App) runImport(cmd *cobra.Command, args []string) error {
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	source, _ := cmd.Flags().GetString("source")
+
+	// Determine directory to scan
+	scanDir := a.config.DownloadDir
+	if len(args) > 0 {
+		scanDir = args[0]
+	}
+
+	fmt.Printf("Scanning directory: %s\n", scanDir)
+
+	// Check if directory exists
+	if _, err := os.Stat(scanDir); os.IsNotExist(err) {
+		return fmt.Errorf("directory does not exist: %s", scanDir)
+	}
+
+	// Open database
+	db, err := database.Open(a.config.Database.Path)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer db.Close()
+
+	// Find image files
+	imageFiles, err := a.findImageFiles(scanDir)
+	if err != nil {
+		return fmt.Errorf("failed to scan directory: %w", err)
+	}
+
+	if len(imageFiles) == 0 {
+		fmt.Println("No image files found in the directory.")
+		return nil
+	}
+
+	fmt.Printf("Found %d image files\n", len(imageFiles))
+
+	if dryRun {
+		fmt.Println("\n🔍 DRY RUN - Would import the following files:")
+	}
+
+	imported := 0
+	skipped := 0
+	failed := 0
+
+	for _, filePath := range imageFiles {
+		filename := filepath.Base(filePath)
+
+		if dryRun {
+			fmt.Printf("  - %s\n", filename)
+			continue
+		}
+
+		// Extract metadata
+		sourceID := a.extractSourceID(filename)
+		resolution, fileSize, err := a.getImageInfo(filePath)
+		if err != nil {
+			fmt.Printf("⚠️  Failed to get info for %s: %v\n", filename, err)
+			failed++
+			continue
+		}
+
+		// Calculate checksum
+		checksum, err := a.calculateChecksum(filePath)
+		if err != nil {
+			fmt.Printf("⚠️  Failed to calculate checksum for %s: %v\n", filename, err)
+			failed++
+			continue
+		}
+
+		// Check if already exists
+		exists, err := db.ExistsByChecksum(checksum)
+		if err != nil {
+			fmt.Printf("⚠️  Failed to check existence for %s: %v\n", filename, err)
+			failed++
+			continue
+		}
+
+		if exists {
+			fmt.Printf("⏭️  Skipped (already exists): %s\n", filename)
+			skipped++
+			continue
+		}
+
+		// Create image record
+		img := &database.Image{
+			Source:       source,
+			SourceID:     sourceID,
+			URL:          "", // Local file, no URL
+			LocalPath:    filePath,
+			Checksum:     checksum,
+			Tags:         "",
+			Resolution:   resolution,
+			FileSize:     fileSize,
+			DownloadedAt: time.Now(),
+			Favorite:     false,
+		}
+
+		// Insert into database
+		err = db.InsertImage(img)
+		if err != nil {
+			fmt.Printf("❌ Failed to import %s: %v\n", filename, err)
+			failed++
+		} else {
+			fmt.Printf("✅ Imported: %s\n", filename)
+			imported++
+		}
+	}
+
+	if dryRun {
+		fmt.Printf("\nWould import %d files\n", len(imageFiles))
+	} else {
+		fmt.Printf("\n" + strings.Repeat("=", 50) + "\n")
+		fmt.Printf("IMPORT SUMMARY:\n")
+		fmt.Printf("  Successfully imported: %d\n", imported)
+		fmt.Printf("  Skipped (already exist): %d\n", skipped)
+		if failed > 0 {
+			fmt.Printf("  Failed: %d\n", failed)
+		}
+		fmt.Printf("  Total files processed: %d\n", len(imageFiles))
+	}
+
+	return nil
+}
+
+// findImageFiles finds all image files in a directory
+func (a *App) findImageFiles(dir string) ([]string, error) {
+	var files []string
+	imageExts := []string{".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			ext := strings.ToLower(filepath.Ext(path))
+			for _, imageExt := range imageExts {
+				if ext == imageExt {
+					files = append(files, path)
+					break
+				}
+			}
+		}
+
+		return nil
+	})
+
+	return files, err
+}
+
+// extractSourceID extracts source ID from filename (e.g., wallhaven-1q3g79.png -> 1q3g79)
+func (a *App) extractSourceID(filename string) string {
+	// Try wallhaven pattern
+	if strings.HasPrefix(filename, "wallhaven-") && strings.Contains(filename, ".") {
+		parts := strings.Split(filename, ".")
+		if len(parts) >= 2 {
+			idPart := strings.TrimPrefix(parts[0], "wallhaven-")
+			return idPart
+		}
+	}
+
+	// For other sources or unknown, return empty string
+	return ""
+}
+
+// getImageInfo gets basic image information
+func (a *App) getImageInfo(filePath string) (resolution string, fileSize int64, err error) {
+	// Get file size
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		return "", 0, err
+	}
+	fileSize = fileInfo.Size()
+
+	// Try to get image dimensions using identify (ImageMagick)
+	cmd := exec.Command("identify", "-format", "%wx%h", filePath)
+	output, err := cmd.Output()
+	if err != nil {
+		// Fallback: just return unknown resolution
+		return "unknown", fileSize, nil
+	}
+
+	resolution = strings.TrimSpace(string(output))
+	return resolution, fileSize, nil
+}
+
+// calculateChecksum calculates SHA256 checksum of a file
+func (a *App) calculateChecksum(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// reloadViewer attempts to reload the viewer with a new image
+func (a *App) reloadViewer(viewerCmd *exec.Cmd, symlinkPath string) {
+	if viewerCmd == nil || viewerCmd.Process == nil {
+		return
+	}
+
+	// Try different reload methods based on viewer
+	viewerName := filepath.Base(viewerCmd.Args[0])
+
+	switch viewerName {
+	case "feh":
+		// feh supports USR1 signal to reload
+		viewerCmd.Process.Signal(syscall.SIGUSR1)
+	case "sxiv", "nsxiv":
+		// sxiv supports SIGUSR1 to reload
+		viewerCmd.Process.Signal(syscall.SIGUSR1)
+	default:
+		// For other viewers, try to touch the file to trigger reload
+		now := time.Now()
+		if err := os.Chtimes(symlinkPath, now, now); err == nil {
+			// File modification time updated, viewer might detect change
+		}
+		// Some viewers might need the window to be raised/focused
+	}
+}
+
+// copyFile copies a file from src to dst
+func (a *App) copyFile(src, dst string) error {
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+	return err
 }
 
 // newUpdateCmd creates the update command
