@@ -94,7 +94,7 @@ func (db *DB) init() error {
 	ALTER TABLE images ADD COLUMN favorite BOOLEAN DEFAULT FALSE;
 	`
 	// This will fail silently if the column already exists
-	db.conn.Exec(migration)
+	_, _ = db.conn.Exec(migration)
 
 	return nil
 }

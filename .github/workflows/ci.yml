@@ -51,3 +51,4 @@ jobs:
       uses: golangci/golangci-lint-action@v4
       with:
         version: latest
+        args: --out-format=colored-line-number

@@ -14,7 +14,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/AccursedGalaxy/wallfetch/internal/database"
@@ -556,8 +555,8 @@ func (a *App) runInteractiveBrowse(images []database.Image, db *database.DB, pre
 	// Function to cleanup viewer on exit
 	cleanupViewer := func() {
 		if viewerRunning && viewerCmd != nil && viewerCmd.Process != nil {
-			viewerCmd.Process.Kill()
-			viewerCmd.Wait()
+			_ = viewerCmd.Process.Kill()
+			_ = viewerCmd.Wait()
 		}
 	}
 
@@ -622,7 +621,7 @@ func (a *App) runInteractiveBrowse(images []database.Image, db *database.DB, pre
 			err := db.ToggleFavorite(img.ID)
 			if err != nil {
 				fmt.Printf("Failed to toggle favorite: %v\nPress Enter to continue...", err)
-				reader.ReadString('\n')
+				_, _ = reader.ReadString('\n')
 			} else {
 				// Update the image in our slice to reflect the change
 				img.Favorite = !img.Favorite
@@ -631,7 +630,7 @@ func (a *App) runInteractiveBrowse(images []database.Image, db *database.DB, pre
 					status = "removed from"
 				}
 				fmt.Printf("Wallpaper %s favorites!\nPress Enter to continue...", status)
-				reader.ReadString('\n')
+				_, _ = reader.ReadString('\n')
 			}
 		case "d", "delete":
 			// Confirm deletion
@@ -648,12 +647,12 @@ func (a *App) runInteractiveBrowse(images []database.Image, db *database.DB, pre
 				localPath, err := db.DeleteImage(img.ID)
 				if err != nil {
 					fmt.Printf("Failed to delete from database: %v\nPress Enter to continue...", err)
-					reader.ReadString('\n')
+					_, _ = reader.ReadString('\n')
 				} else {
 					// Try to delete the file too
 					if err := os.Remove(localPath); err != nil && !os.IsNotExist(err) {
 						fmt.Printf("Deleted from database but failed to remove file: %v\nPress Enter to continue...", err)
-						reader.ReadString('\n')
+						_, _ = reader.ReadString('\n')
 					} else {
 						fmt.Printf("✅ Wallpaper deleted successfully!\n")
 
@@ -680,22 +679,22 @@ func (a *App) runInteractiveBrowse(images []database.Image, db *database.DB, pre
 						}
 
 						fmt.Printf("Press Enter to continue...")
-						reader.ReadString('\n')
+						_, _ = reader.ReadString('\n')
 					}
 				}
 			} else {
 				fmt.Printf("Deletion cancelled.\nPress Enter to continue...")
-				reader.ReadString('\n')
+				_, _ = reader.ReadString('\n')
 			}
 		case "o", "open":
 			if viewer != "" {
 				if err := a.openWithViewer(img.LocalPath, viewer); err != nil {
 					fmt.Printf("Failed to open: %v\nPress Enter to continue...", err)
-					reader.ReadString('\n')
+					_, _ = reader.ReadString('\n')
 				}
 			} else {
 				fmt.Printf("No viewer configured. Press Enter to continue...")
-				reader.ReadString('\n')
+				_, _ = reader.ReadString('\n')
 			}
 		case "i", "info":
 			fmt.Println()
@@ -715,7 +714,7 @@ func (a *App) runInteractiveBrowse(images []database.Image, db *database.DB, pre
 			fmt.Printf("Full Path: %s\n", img.LocalPath)
 			previewManager.DisplayImageInfo(img.LocalPath)
 			fmt.Printf("\nPress Enter to continue...")
-			reader.ReadString('\n')
+			_, _ = reader.ReadString('\n')
 		case "h", "help":
 			fmt.Println()
 			fmt.Println(strings.Repeat("=", 50))
@@ -729,12 +728,12 @@ func (a *App) runInteractiveBrowse(images []database.Image, db *database.DB, pre
 			fmt.Printf("  q, quit         - Quit browsing\n")
 			fmt.Printf("  h, help         - Show this help\n")
 			fmt.Printf("\nPress Enter to continue...")
-			reader.ReadString('\n')
+			_, _ = reader.ReadString('\n')
 		case "q", "quit":
 			return nil
 		default:
 			fmt.Printf("Unknown command '%s'. Type 'h' for help.\nPress Enter to continue...", command)
-			reader.ReadString('\n')
+			_, _ = reader.ReadString('\n')
 		}
 	}
 }
@@ -1524,32 +1523,6 @@ func (a *App) calculateChecksum(filePath string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-// reloadViewer attempts to reload the viewer with a new image
-func (a *App) reloadViewer(viewerCmd *exec.Cmd, symlinkPath string) {
-	if viewerCmd == nil || viewerCmd.Process == nil {
-		return
-	}
-
-	// Try different reload methods based on viewer
-	viewerName := filepath.Base(viewerCmd.Args[0])
-
-	switch viewerName {
-	case "feh":
-		// feh supports USR1 signal to reload
-		viewerCmd.Process.Signal(syscall.SIGUSR1)
-	case "sxiv", "nsxiv":
-		// sxiv supports SIGUSR1 to reload
-		viewerCmd.Process.Signal(syscall.SIGUSR1)
-	default:
-		// For other viewers, try to touch the file to trigger reload
-		now := time.Now()
-		if err := os.Chtimes(symlinkPath, now, now); err == nil {
-			// File modification time updated, viewer might detect change
-		}
-		// Some viewers might need the window to be raised/focused
-	}
-}
-
 // copyFile copies a file from src to dst
 func (a *App) copyFile(src, dst string) error {
 	source, err := os.Open(src)
@@ -1675,7 +1648,7 @@ func (a *App) runUpdate(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		// Restore the original for now
-		os.Rename(backupPath, execPath)
+		_ = os.Rename(backupPath, execPath)
 	}
 
 	// Replace binary
@@ -1694,13 +1667,13 @@ func (a *App) runUpdate(cmd *cobra.Command, args []string) error {
 		if err := installCmd.Run(); err != nil {
 			// Try to restore backup
 			restoreCmd := exec.Command("sudo", "mv", backupPath, execPath)
-			restoreCmd.Run()
+			_ = restoreCmd.Run()
 			return fmt.Errorf("failed to install update: %w", err)
 		}
 
 		// Remove backup
 		removeCmd := exec.Command("sudo", "rm", "-f", backupPath)
-		removeCmd.Run()
+		_ = removeCmd.Run()
 	} else {
 		// Direct file operations
 		if err := os.Rename(execPath, backupPath); err != nil {
@@ -1709,7 +1682,7 @@ func (a *App) runUpdate(cmd *cobra.Command, args []string) error {
 
 		if err := copyFile(tempFile, execPath); err != nil {
 			// Try to restore backup
-			os.Rename(backupPath, execPath)
+			_ = os.Rename(backupPath, execPath)
 			return fmt.Errorf("failed to install update: %w", err)
 		}
 
