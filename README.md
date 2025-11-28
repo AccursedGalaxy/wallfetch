@@ -26,7 +26,10 @@
     <img src="https://img.shields.io/github/v/release/AccursedGalaxy/wallfetch?style=for-the-badge&logo=github&color=blue" alt="Release">
   </a>
   <a href="https://github.com/AccursedGalaxy/wallfetch/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/AccursedGalaxy/wallfetch/release.yml?style=for-the-badge&logo=github-actions&logoColor=white" alt="Build Status">
+    <img src="https://img.shields.io/github/actions/workflow/status/AccursedGalaxy/wallfetch/ci.yml?style=for-the-badge&logo=github-actions&logoColor=white" alt="CI Status">
+  </a>
+  <a href="https://github.com/AccursedGalaxy/wallfetch/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/AccursedGalaxy/wallfetch/release.yml?style=for-the-badge&logo=github-actions&logoColor=white" alt="Release Status">
   </a>
 </p>
 

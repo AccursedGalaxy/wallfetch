@@ -272,7 +272,8 @@ func (a *App) runWallhavenFetch(cmd *cobra.Command) error {
 	}
 
 	// Final summary
-	fmt.Printf("\n" + strings.Repeat("=", 50) + "\n")
+	fmt.Println()
+	fmt.Println(strings.Repeat("=", 50))
 	fmt.Printf("FINAL SUMMARY:\n")
 	fmt.Printf("  Target: %d\n", limit)
 	fmt.Printf("  Downloaded: %d\n", totalDownloaded)
@@ -697,7 +698,8 @@ func (a *App) runInteractiveBrowse(images []database.Image, db *database.DB, pre
 				reader.ReadString('\n')
 			}
 		case "i", "info":
-			fmt.Printf("\n" + strings.Repeat("=", 50) + "\n")
+			fmt.Println()
+			fmt.Println(strings.Repeat("=", 50))
 			fmt.Printf("Detailed Information:\n")
 			fmt.Printf("ID: %d\n", img.ID)
 			fmt.Printf("Source: %s (%s)\n", img.Source, img.SourceID)
@@ -715,7 +717,8 @@ func (a *App) runInteractiveBrowse(images []database.Image, db *database.DB, pre
 			fmt.Printf("\nPress Enter to continue...")
 			reader.ReadString('\n')
 		case "h", "help":
-			fmt.Printf("\n" + strings.Repeat("=", 50) + "\n")
+			fmt.Println()
+			fmt.Println(strings.Repeat("=", 50))
 			fmt.Printf("Interactive Browsing Commands:\n")
 			fmt.Printf("  n, next, Enter  - Next wallpaper\n")
 			fmt.Printf("  p, prev         - Previous wallpaper\n")
@@ -881,7 +884,8 @@ func (a *App) runPrune(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Printf("\n" + strings.Repeat("=", 50) + "\n")
+	fmt.Println()
+	fmt.Println(strings.Repeat("=", 50))
 	fmt.Printf("PRUNE SUMMARY:\n")
 	fmt.Printf("  Files deleted: %d\n", deleted)
 	if failed > 0 {
@@ -1016,7 +1020,8 @@ func (a *App) runDedupe(cmd *cobra.Command, args []string) error {
 		deleted++
 	}
 
-	fmt.Printf("\n" + strings.Repeat("=", 50) + "\n")
+	fmt.Println()
+	fmt.Println(strings.Repeat("=", 50))
 	fmt.Printf("DEDUPE SUMMARY:\n")
 	fmt.Printf("  Successfully deleted: %d\n", deleted)
 	if failed > 0 {
@@ -1427,7 +1432,8 @@ func (a *App) runImport(cmd *cobra.Command, args []string) error {
 	if dryRun {
 		fmt.Printf("\nWould import %d files\n", len(imageFiles))
 	} else {
-		fmt.Printf("\n" + strings.Repeat("=", 50) + "\n")
+		fmt.Println()
+		fmt.Println(strings.Repeat("=", 50))
 		fmt.Printf("IMPORT SUMMARY:\n")
 		fmt.Printf("  Successfully imported: %d\n", imported)
 		fmt.Printf("  Skipped (already exist): %d\n", skipped)
